@@ -733,4 +733,58 @@ public class GameServer {
     public void setJoinLeaveNotificationsEnabled(boolean joinLeaveNotificationsEnabled) {
         this.joinLeaveNotificationsEnabled = joinLeaveNotificationsEnabled;
     }
+    
+    /**
+     * Synchronizes credentials between standard and SFTP-specific fields
+     * This ensures that if one set of credentials is missing, it falls back to the other
+     * @return True if credentials were synchronized
+     */
+    public boolean synchronizeCredentials() {
+        boolean updated = false;
+        
+        // If SFTP credentials are missing but standard credentials exist, copy them
+        if ((getSftpHost() == null || getSftpHost().trim().isEmpty()) && 
+            (getHost() != null && !getHost().trim().isEmpty())) {
+            setSftpHost(getHost());
+            updated = true;
+        }
+        
+        if ((getSftpUsername() == null || getSftpUsername().trim().isEmpty()) && 
+            (getUsername() != null && !getUsername().trim().isEmpty())) {
+            setSftpUsername(getUsername());
+            updated = true;
+        }
+        
+        if ((getSftpPassword() == null || getSftpPassword().trim().isEmpty()) && 
+            (getPassword() != null && !getPassword().trim().isEmpty())) {
+            setSftpPassword(getPassword());
+            updated = true;
+        }
+        
+        if (getSftpPort() <= 0 && getPort() > 0) {
+            setSftpPort(getPort());
+            updated = true;
+        }
+        
+        // If standard credentials are missing but SFTP credentials exist, copy them
+        if ((getHost() == null || getHost().trim().isEmpty()) && 
+            (getSftpHost() != null && !getSftpHost().trim().isEmpty())) {
+            setHost(getSftpHost());
+            updated = true;
+        }
+        
+        if ((getUsername() == null || getUsername().trim().isEmpty()) && 
+            (getSftpUsername() != null && !getSftpUsername().trim().isEmpty())) {
+            setUsername(getSftpUsername());
+            updated = true;
+        }
+        
+        if ((getPassword() == null || getPassword().trim().isEmpty()) && 
+            (getSftpPassword() != null && !getSftpPassword().trim().isEmpty())) {
+            setPassword(getSftpPassword());
+            updated = true;
+        }
+        
+        return updated;
+    }
 }

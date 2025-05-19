@@ -175,6 +175,9 @@ public class ServerCommand implements ICommand {
         gameServer.setUsername(username);
         gameServer.setPassword(password);
         
+        // Run credential synchronization to ensure both sets are complete
+        gameServer.synchronizeCredentials();
+        
         // Test the connection first
         try {
             logger.info("Testing SFTP connection to server {} ({}:{})", name, host, port);

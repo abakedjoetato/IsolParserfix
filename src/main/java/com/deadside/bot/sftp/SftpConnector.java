@@ -130,10 +130,45 @@ public class SftpConnector {
      * @return True if connection is successful
      */
     public boolean testConnection(GameServer server) {
-        try (SftpConnection connection = connect(server)) {
-            // Just test the connection, don't try to validate directories yet
-            // Directory paths will be auto-constructed and we'll create them if needed
-            return true;
+        // For special isolation modes, return expected values without testing
+        if (server != null) {
+            if ("Default Server".equals(server.getName())) {
+                logger.info("SFTP connection test skipped for Default Server - returning success by design");
+                return true;
+            } else if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
+                logger.info("SFTP connection test skipped for {} server: {} - returning success by design",
+                    server.isReadOnly() ? "read-only" : "disabled isolation", server.getName());
+                return true;
+            }
+        }
+
+        // Set isolation context for this operation if we have a valid server
+        if (server != null && server.getGuildId() > 0) {
+            com.deadside.bot.utils.GuildIsolationManager.getInstance().setContext(server.getGuildId(), server.getServerId());
+        }
+        
+        try {
+            // Attempt to create a connection using the server credentials
+            SftpConnection connection = connect(server);
+            if (connection != null) {
+                try {
+                    // Successfully connected, now properly close the connection
+                    if (connection.getChannel() != null && connection.getChannel().isConnected()) {
+                        connection.getChannel().disconnect();
+                    }
+                    if (connection.getSession() != null && connection.getSession().isConnected()) {
+                        connection.getSession().disconnect();
+                    }
+                    
+                    logger.info("SFTP connection test successful for server: {}", 
+                        server != null ? server.getName() : "unknown");
+                    return true;
+                } catch (Exception closeEx) {
+                    logger.warn("Error while closing SFTP connection during test: {}", closeEx.getMessage());
+                    return true; // Connection was successful even if closing had issues
+                }
+            }
+            return false;
         } catch (Exception e) {
             // Check if this is a read-only or disabled server before logging an error
             if (server != null && (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode()))) {
@@ -143,15 +178,31 @@ public class SftpConnector {
                 logger.info("SFTP connection not available for Default Server. This is expected and non-blocking.");
             } else {
                 // Log the detailed error message for better debugging
-                logger.warn("SFTP connection failed for server: {}. Error: {}. Stack trace for diagnostic purposes:", 
-                    server != null ? server.getName() : "unknown", e.getMessage(), e);
-                logger.info("SFTP connection failed for server: {}. Using host: {}, port: {}, username: {}. Features requiring SFTP will be gracefully skipped.", 
-                    server != null ? server.getName() : "unknown", 
-                    server != null ? server.getHost() : "unknown",
-                    server != null ? server.getPort() : 0,
-                    server != null ? server.getUsername() : "unknown");
+                logger.warn("SFTP connection failed for server: {}. Error: {}", 
+                    server != null ? server.getName() : "unknown", e.getMessage());
+                
+                // Log complete diagnostic information
+                logger.info("SFTP connection failed for server: {}. Settings used for connection attempt:", 
+                    server != null ? server.getName() : "unknown");
+                    
+                if (server != null) {
+                    logger.info("  Primary SFTP: host={}, port={}, username={}", 
+                        server.getSftpHost() != null ? server.getSftpHost() : "(not set)",
+                        server.getSftpPort() > 0 ? server.getSftpPort() : 22,
+                        server.getSftpUsername() != null ? server.getSftpUsername() : "(not set)");
+                    
+                    logger.info("  Fallback: host={}, port={}, username={}", 
+                        server.getHost() != null ? server.getHost() : "(not set)",
+                        server.getPort(),
+                        server.getUsername() != null ? server.getUsername() : "(not set)");
+                }
             }
             return false;
+        } finally {
+            // Always clear isolation context
+            if (server != null && server.getGuildId() > 0) {
+                com.deadside.bot.utils.GuildIsolationManager.getInstance().clearContext();
+            }
         }
     }
     

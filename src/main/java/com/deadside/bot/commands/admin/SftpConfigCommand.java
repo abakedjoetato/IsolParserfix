@@ -44,9 +44,9 @@ public class SftpConfigCommand implements ICommand {
                 new SubcommandData("update", "Update SFTP configuration for a server")
                     .addOption(OptionType.STRING, "server", "Name of the server to update", true)
                     .addOption(OptionType.STRING, "host", "SFTP host address", true)
-                    .addOption(OptionType.INTEGER, "port", "SFTP port (default: 22)", false)
                     .addOption(OptionType.STRING, "username", "SFTP username", true)
-                    .addOption(OptionType.STRING, "password", "SFTP password", true),
+                    .addOption(OptionType.STRING, "password", "SFTP password", true)
+                    .addOption(OptionType.INTEGER, "port", "SFTP port (default: 22)", false),
                 new SubcommandData("test", "Test SFTP connection for a server")
                     .addOption(OptionType.STRING, "server", "Name of the server to test", true)
             )
@@ -116,6 +116,9 @@ public class SftpConfigCommand implements ICommand {
         server.setHost(host);
         server.setUsername(username);
         server.setPassword(password);
+        
+        // Make sure both sets of credentials are synchronized
+        server.synchronizeCredentials();
         
         // Test the connection first
         boolean connectionSuccess = false;

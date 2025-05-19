@@ -69,6 +69,13 @@ public class GameServerRepository {
                 return;
             }
             
+            // Ensure credential synchronization between regular and SFTP-specific fields
+            // This will ensure fallback mechanisms work properly
+            if (server.synchronizeCredentials()) {
+                logger.info("Synchronized credentials for server {} (Guild={}) before saving",
+                    server.getName(), server.getGuildId());
+            }
+            
             ReplaceOptions options = new ReplaceOptions().upsert(true);
             
             if (server.getId() == null) {
