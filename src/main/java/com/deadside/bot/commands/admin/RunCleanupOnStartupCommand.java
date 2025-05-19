@@ -1,31 +1,43 @@
 package com.deadside.bot.commands.admin;
 
+import com.deadside.bot.commands.ICommand;
 import com.deadside.bot.isolation.DataCleanupTool;
 import com.deadside.bot.utils.OwnerCheck;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.Command.Choice;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 
 import java.awt.*;
+import java.util.List;
 
 /**
  * Admin command to control automatic cleanup on bot startup
  * This can only be executed by the bot owner
  */
-public class RunCleanupOnStartupCommand {
+public class RunCleanupOnStartupCommand implements ICommand {
     // Configuration settings
     private static boolean runCleanupOnStartup = true;
     
-    /**
-     * Create the slash command data for this command
-     */
-    public static SlashCommandData getCommandData() {
-        return Commands.slash("autocleanup", "Configure automatic cleanup on startup [Bot Owner Only]")
+    @Override
+    public String getName() {
+        return "set-startup-cleanup";
+    }
+    
+    @Override
+    public CommandData getCommandData() {
+        return Commands.slash("set-startup-cleanup", "Configure automatic cleanup on startup [Bot Owner Only]")
             .setGuildOnly(true)
             .addOption(OptionType.BOOLEAN, "enabled", "Enable or disable automatic cleanup on startup", true);
+    }
+    
+    @Override
+    public List<Choice> handleAutoComplete(CommandAutoCompleteInteractionEvent event) {
+        return List.of();
     }
     
     /**
@@ -36,9 +48,7 @@ public class RunCleanupOnStartupCommand {
         return runCleanupOnStartup;
     }
     
-    /**
-     * Execute the command
-     */
+    @Override
     public void execute(SlashCommandInteractionEvent event) {
         // Check if user is bot owner
         if (!OwnerCheck.isOwner(event.getUser().getIdLong())) {

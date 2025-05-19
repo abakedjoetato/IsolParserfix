@@ -1,5 +1,6 @@
 package com.deadside.bot.commands.admin;
 
+import com.deadside.bot.commands.ICommand;
 import com.deadside.bot.db.models.GameServer;
 import com.deadside.bot.db.repositories.GameServerRepository;
 import com.deadside.bot.isolation.DataCleanupTool;
@@ -7,9 +8,12 @@ import com.deadside.bot.isolation.IsolationBootstrap;
 import com.deadside.bot.utils.OwnerCheck;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.commands.Command.Choice;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
@@ -23,13 +27,16 @@ import java.util.stream.Collectors;
  * Admin command to reset database data for a guild/server
  * This is a destructive operation and can only be executed by the bot owner
  */
-public class DatabaseResetCommand {
+public class DatabaseResetCommand implements ICommand {
     
-    /**
-     * Create the slash command data for this command
-     */
-    public static SlashCommandData getCommandData() {
-        return Commands.slash("dbreset", "Reset database data [Bot Owner Only]")
+    @Override
+    public String getName() {
+        return "db-reset";
+    }
+    
+    @Override
+    public CommandData getCommandData() {
+        return Commands.slash("db-reset", "Reset database data [Bot Owner Only]")
             .setGuildOnly(true)
             .addSubcommands(
                 new SubcommandData("server", "Reset data for a specific server in this guild")
@@ -39,12 +46,15 @@ public class DatabaseResetCommand {
             );
     }
     
-    /**
-     * Execute the command
-     */
+    @Override
+    public List<Choice> handleAutoComplete(CommandAutoCompleteInteractionEvent event) {
+        return List.of();
+    }
+    
+    @Override
     public void execute(SlashCommandInteractionEvent event) {
         // Check if user is bot owner
-        if (!OwnerCheck.isOwner(event)) {
+        if (!OwnerCheck.isOwner(event.getUser().getIdLong())) {
             event.reply("This command can only be used by the bot owner.").setEphemeral(true).queue();
             return;
         }

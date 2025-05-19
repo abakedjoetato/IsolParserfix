@@ -20,15 +20,15 @@ public class RegisterCommands {
      */
     public static void registerAdminCommands(CommandManager commandManager) {
         try {
-            // Add the database admin commands
-            SlashCommandData orphanCleanupCommand = OrphanCleanupCommand.getCommandData();
-            SlashCommandData databaseResetCommand = DatabaseResetCommand.getCommandData();
-            SlashCommandData runCleanupOnStartupCommand = RunCleanupOnStartupCommand.getCommandData();
+            // Create command instances
+            OrphanCleanupCommand orphanCleanupCommand = new OrphanCleanupCommand();
+            DatabaseResetCommand databaseResetCommand = new DatabaseResetCommand();
+            RunCleanupOnStartupCommand runCleanupOnStartupCommand = new RunCleanupOnStartupCommand();
             
             // Register the commands
-            commandManager.addCommand("cleanup-orphans", orphanCleanupCommand, new OrphanCleanupCommand());
-            commandManager.addCommand("db-reset", databaseResetCommand, new DatabaseResetCommand());
-            commandManager.addCommand("set-startup-cleanup", runCleanupOnStartupCommand, new RunCleanupOnStartupCommand());
+            commandManager.registerCommand(orphanCleanupCommand);
+            commandManager.registerCommand(databaseResetCommand);
+            commandManager.registerCommand(runCleanupOnStartupCommand);
             
             logger.info("Registered admin database commands");
         } catch (Exception e) {

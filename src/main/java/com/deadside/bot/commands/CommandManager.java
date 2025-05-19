@@ -249,7 +249,7 @@ public class CommandManager {
     /**
      * Register a command handler
      */
-    private void registerCommand(ICommand command) {
+    public void registerCommand(ICommand command) {
         commands.put(command.getName(), command);
         logger.debug("Registered command: {}", command.getName());
     }
