@@ -207,23 +207,17 @@ public class SftpConnector {
     }
     
     /**
-     * Ensures the base directory exists on the SFTP server
-     * @param server The server config
-     * @return True if directory exists or was created
+     * Checks if a directory exists on the SFTP server
+     * @return True if directory exists
      */
-    private boolean ensureDirectoryExists(SftpConnection connection, String directory) {
+    private boolean directoryExists(SftpConnection connection, String directory) {
         try {
-            try {
-                // Check if directory exists
-                connection.getChannel().stat(directory);
-                return true;
-            } catch (Exception e) {
-                // Directory doesn't exist, create it
-                connection.getChannel().mkdir(directory);
-                return true;
-            }
+            // Check if directory exists
+            connection.getChannel().stat(directory);
+            return true;
         } catch (Exception e) {
-            logger.error("Failed to create directory: {}", directory, e);
+            // Directory doesn't exist
+            logger.info("Directory doesn't exist on SFTP server: {}", directory);
             return false;
         }
     }
@@ -278,7 +272,7 @@ public class SftpConnector {
                 }
             } catch (Exception e) {
                 // Directory might not exist yet, try to create it
-                if (ensureDirectoryExists(connection, directory)) {
+                if (directoryExists(connection, directory)) {
                     // Directory created successfully, return empty list
                     logger.info("Created directory {} for server {}", directory, server.getName());
                 } else {
@@ -339,13 +333,14 @@ public class SftpConnector {
             String baseDir = server.getDeathlogsDirectory();
             List<String> csvFiles = new ArrayList<>();
             
-            // Ensure base directory exists
+            // Check if base directory exists
             try {
-                if (ensureDirectoryExists(connection, baseDir)) {
+                if (directoryExists(connection, baseDir)) {
                     // Find all csv files in the directory and subdirectories
                     findCsvFilesRecursively(connection, baseDir, "", csvFiles);
                 } else {
-                    logger.info("Could not access or create deathlogs directory for server {}", server.getName());
+                    logger.info("Could not access deathlogs directory for server {}. Directory doesn't exist: {}", 
+                        server.getName(), baseDir);
                 }
             } catch (Exception e) {
                 // Log as info instead of warning to avoid alarming the user
@@ -388,7 +383,10 @@ public class SftpConnector {
             
             // Ensure base directory exists
             try {
-                ensureDirectoryExists(connection, baseDir);
+                boolean dirExists = directoryExists(connection, baseDir);
+                if (!dirExists) {
+                    logger.info("Log directory {} does not exist for server {}", baseDir, server.getName());
+                }
                 
                 // Find recent csv files in the directory and subdirectories (implementation below)
                 findRecentCsvFilesByDate(connection, baseDir, "", recentCsvFiles, cutoffDateStr);
