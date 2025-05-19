@@ -326,6 +326,25 @@ public class GameServerRepository {
     }
     
     /**
+     * Find a game server by guild ID and server ID
+     * @param guildId The guild ID for isolation boundary
+     * @param serverId The server ID to find
+     * @return The game server if found
+     */
+    public GameServer findByGuildIdAndServerId(long guildId, String serverId) {
+        try {
+            Bson filter = Filters.and(
+                Filters.eq("serverId", serverId),
+                Filters.eq("guildId", guildId)
+            );
+            return getCollection().find(filter).first();
+        } catch (Exception e) {
+            logger.error("Error finding game server by guild: {} and server ID: {}", guildId, serverId, e);
+            return null;
+        }
+    }
+    
+    /**
      * Find a game server by name using isolation-aware approach
      * This method properly respects isolation boundaries when retrieving a server by name
      * @param name The server name to find
@@ -381,6 +400,26 @@ public class GameServerRepository {
         } catch (Exception e) {
             logger.error("Error finding game servers for guild: {}", guildId, e);
             return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Delete a game server by guild ID and server ID
+     * @param guildId The guild ID for isolation boundary
+     * @param serverId The server ID to delete
+     * @return True if successful, false otherwise
+     */
+    public boolean deleteByGuildIdAndServerId(long guildId, String serverId) {
+        try {
+            Bson filter = Filters.and(
+                Filters.eq("serverId", serverId),
+                Filters.eq("guildId", guildId)
+            );
+            DeleteResult result = getCollection().deleteOne(filter);
+            return result.getDeletedCount() > 0;
+        } catch (Exception e) {
+            logger.error("Error deleting game server by guild: {} and server ID: {}", guildId, serverId, e);
+            return false;
         }
     }
     

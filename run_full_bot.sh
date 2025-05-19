@@ -9,20 +9,20 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Starting Deadside Discord Bot setup...${NC}"
 
-# Check if MongoDB is running, if not start it
-if ! pgrep -x "mongod" > /dev/null; then
-  echo -e "${YELLOW}Starting MongoDB...${NC}"
-  mkdir -p data/db
-  mongod --dbpath=data/db --logpath=data/mongod.log --fork
-  if [ $? -eq 0 ]; then
-    echo -e "${GREEN}MongoDB started successfully${NC}"
-  else
-    echo -e "${RED}Failed to start MongoDB${NC}"
-    exit 1
-  fi
+# Check for MongoDB URI in environment or switch to fallback
+if [ -z "$MONGO_URI" ]; then
+  echo -e "${YELLOW}Warning: No MONGO_URI environment variable found${NC}"
+  echo -e "${YELLOW}Using MongoDB connection string from config file${NC}"
+  
+  # No need to start MongoDB in Replit as we'll use MongoDB Atlas or equivalent
+  echo -e "${GREEN}Skipping MongoDB local startup (using remote connection)${NC}"
 else
-  echo -e "${GREEN}MongoDB is already running${NC}"
+  echo -e "${GREEN}Using MongoDB connection from environment variable${NC}"
 fi
+
+# Create required directories regardless of MongoDB connection
+mkdir -p data/db
+mkdir -p data/logs
 
 # Create directories if they don't exist
 mkdir -p data/deathlogs

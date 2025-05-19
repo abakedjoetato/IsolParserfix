@@ -422,12 +422,22 @@ public class CsvLogIntegrator {
         
         // Log validation
         private boolean logFileExists;
+        private boolean logProcessingValid;
         private int logEventsProcessed;
+        private int eventsProcessed;
         
         // Leaderboard validation
         private boolean leaderboardsValid;
         private int topKillsCount;
         private int topDeathsCount;
+        
+        /**
+         * Check if this validation summary indicates a valid state
+         * @return true if the validation is valid
+         */
+        public boolean isValid() {
+            return successful && (errorMessage == null || errorMessage.isEmpty());
+        }
         private int topKdCount;
         
         // Getters and setters
