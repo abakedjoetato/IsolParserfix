@@ -133,10 +133,14 @@ public class SftpConnector {
             return new ArrayList<>();
         }
         
-        // Handle read-only or disabled isolation mode servers
-        if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
+        // Handle restricted isolation mode servers (read-only, disabled, or Default Server)
+        if (server.hasRestrictedIsolation()) {
+            String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                  server.isReadOnly() ? "read-only" :
+                                  "disabled isolation";
+            
             logger.info("Skipping file listing for {} server: {}",
-                server.isReadOnly() ? "read-only" : "disabled isolation", server.getName());
+                isolationMode, server.getName());
             return new ArrayList<>();
         }
         
@@ -199,10 +203,14 @@ public class SftpConnector {
             return new ArrayList<>();
         }
         
-        // Handle read-only or disabled isolation mode servers
-        if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
+        // Handle restricted isolation mode servers (read-only, disabled, or Default Server)
+        if (server.hasRestrictedIsolation()) {
+            String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                  server.isReadOnly() ? "read-only" :
+                                  "disabled isolation";
+            
             logger.info("Skipping deathlog file search for {} server: {}",
-                server.isReadOnly() ? "read-only" : "disabled isolation", server.getName());
+                isolationMode, server.getName());
             return new ArrayList<>();
         }
         
@@ -382,10 +390,14 @@ public class SftpConnector {
             return "";
         }
         
-        // Handle read-only or disabled isolation mode servers
-        if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
+        // Handle restricted isolation mode servers (read-only, disabled, or Default Server)
+        if (server.hasRestrictedIsolation()) {
+            String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                  server.isReadOnly() ? "read-only" :
+                                  "disabled isolation";
+            
             logger.info("Skipping file read for {} server: {}",
-                server.isReadOnly() ? "read-only" : "disabled isolation", server.getName());
+                isolationMode, server.getName());
             return "";
         }
         

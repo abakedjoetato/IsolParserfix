@@ -55,9 +55,10 @@ public class DefaultServerInitializer {
             defaultServer.setLogChannelId(0);
             defaultServer.setStatus("Default");
             
-            // Set isolation mode to read-only for Default Server
+            // Set proper isolation mode for Default Server
+            // This enhances the isolation characteristics with clear naming
             defaultServer.setReadOnly(true);
-            defaultServer.setIsolationMode("read-only");
+            defaultServer.setIsolationMode("Default Server");  // Using special isolation mode name for default servers
             
             // Set isolation context before saving
             com.deadside.bot.utils.GuildIsolationManager.getInstance().setContext(DEFAULT_GUILD_ID, DEFAULT_SERVER_ID);
@@ -161,9 +162,10 @@ public class DefaultServerInitializer {
                 guildDefaultServer.setStatus("Default");
                 guildDefaultServer.setGuildId(guildId);
                 
-                // Set isolation mode to read-only for Default Server
+                // Set proper isolation mode for Default Server
+                // This enhances the isolation characteristics with clear naming
                 guildDefaultServer.setReadOnly(true);
-                guildDefaultServer.setIsolationMode("read-only");
+                guildDefaultServer.setIsolationMode("Default Server");  // Using special isolation mode name for default servers
                 
                 // Save the guild's default server
                 repository.save(guildDefaultServer);

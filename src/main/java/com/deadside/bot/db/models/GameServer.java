@@ -604,6 +604,40 @@ public class GameServer {
      */
     public void setIsolationMode(String isolationMode) {
         this.isolationMode = isolationMode;
+        
+        // Keep readOnly flag in sync with isolation mode for backward compatibility
+        if ("read-only".equalsIgnoreCase(isolationMode)) {
+            this.readOnly = true;
+        } else if ("standard".equalsIgnoreCase(isolationMode)) {
+            this.readOnly = false;
+        }
+        // If "disabled", we leave readOnly as-is
+    }
+    
+    /**
+     * Check if this server has isolation disabled
+     * @return True if isolation is disabled for this server
+     */
+    public boolean isIsolationDisabled() {
+        return "disabled".equalsIgnoreCase(isolationMode);
+    }
+    
+    /**
+     * Check if this is a Default Server
+     * This is a special case for the fallback server
+     * @return True if this is a Default Server
+     */
+    public boolean isDefaultServer() {
+        return "Default Server".equals(name);
+    }
+    
+    /**
+     * Check if this server has any restricted isolation mode
+     * (read-only, disabled, or Default Server)
+     * @return True if the server has restricted isolation
+     */
+    public boolean hasRestrictedIsolation() {
+        return isReadOnly() || isIsolationDisabled() || isDefaultServer();
     }
     
     /**

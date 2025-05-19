@@ -121,12 +121,44 @@ public class GuildIsolationManager {
     
     /**
      * Set the current context with specified guild ID and server ID
+     * This method now also checks for server isolation mode and logs accordingly
      */
     public void setContext(long guildId, String serverId) {
         FilterContext context = new FilterContext(guildId);
         if (serverId != null && !serverId.isEmpty()) {
             context.setServerId(serverId);
+            
+            // Check if this server has a special isolation mode
+            try {
+                com.deadside.bot.db.repositories.GameServerRepository serverRepo = 
+                    new com.deadside.bot.db.repositories.GameServerRepository();
+                com.deadside.bot.db.models.GameServer server = 
+                    serverRepo.findByServerIdAndGuildId(serverId, guildId);
+                
+                if (server != null) {
+                    boolean isRestrictedMode = "Default Server".equals(server.getName()) || 
+                                           server.isReadOnly() || 
+                                           "disabled".equalsIgnoreCase(server.getIsolationMode()) ||
+                                           "read-only".equalsIgnoreCase(server.getIsolationMode());
+                                          
+                    if (isRestrictedMode) {
+                        String serverMode = "Default Server".equals(server.getName()) ? "Default Server" :
+                                          server.isReadOnly() ? "read-only" :
+                                          server.getIsolationMode() + " isolation";
+                        
+                        // Store isolation mode in context for easier access elsewhere
+                        context.setIsolationMode(serverMode);
+                        
+                        logger.debug("Set isolation context for restricted server: Guild ID={}, Server ID={}, Mode={}",
+                            context.getGuildId(), context.getServerId(), serverMode);
+                    }
+                }
+            } catch (Exception e) {
+                // Don't let this check interfere with setting the context
+                logger.debug("Error checking server isolation mode: {}", e.getMessage());
+            }
         }
+        
         currentContext.set(context);
         logger.debug("Set isolation context manually: Guild ID={}, Server ID={}", context.getGuildId(), context.getServerId());
     }
@@ -191,6 +223,7 @@ public class GuildIsolationManager {
     
     /**
      * Create a new filter context with the specified guild and server IDs
+     * This method now also checks and includes isolation mode information
      * @param guildId The Discord guild ID
      * @param serverId The game server ID
      * @return The new filter context, or null if invalid parameters
@@ -204,6 +237,32 @@ public class GuildIsolationManager {
         
         FilterContext context = new FilterContext(guildId);
         context.setServerId(serverId);
+        
+        // Check if this server has a special isolation mode
+        try {
+            com.deadside.bot.db.repositories.GameServerRepository serverRepo = 
+                new com.deadside.bot.db.repositories.GameServerRepository();
+            com.deadside.bot.db.models.GameServer server = 
+                serverRepo.findByServerIdAndGuildId(serverId, guildId);
+            
+            if (server != null) {
+                // Determine isolation mode from server properties
+                if ("Default Server".equals(server.getName())) {
+                    context.setIsolationMode("Default Server");
+                } else if (server.isReadOnly()) {
+                    context.setIsolationMode("read-only");
+                } else if (server.getIsolationMode() != null && !server.getIsolationMode().isEmpty()) {
+                    context.setIsolationMode(server.getIsolationMode());
+                }
+                
+                logger.debug("Created filter context with isolation mode {}: Guild={}, Server={}", 
+                    context.getIsolationMode(), guildId, serverId);
+            }
+        } catch (Exception e) {
+            // Don't let this check interfere with creating the context
+            logger.debug("Error checking server isolation mode during context creation: {}", e.getMessage());
+        }
+        
         return context;
     }
     
@@ -243,9 +302,21 @@ public class GuildIsolationManager {
     public static class FilterContext {
         private long guildId;
         private String serverId;
+        private String isolationMode = "standard"; // Default isolation mode
         
         public FilterContext(long guildId) {
             this.guildId = guildId;
+        }
+        
+        public FilterContext(long guildId, String serverId) {
+            this.guildId = guildId;
+            this.serverId = serverId;
+        }
+        
+        public FilterContext(long guildId, String serverId, String isolationMode) {
+            this.guildId = guildId;
+            this.serverId = serverId;
+            this.isolationMode = isolationMode;
         }
         
         public long getGuildId() {
@@ -262,6 +333,49 @@ public class GuildIsolationManager {
         
         public void setServerId(String serverId) {
             this.serverId = serverId;
+        }
+        
+        public String getIsolationMode() {
+            return isolationMode;
+        }
+        
+        public void setIsolationMode(String isolationMode) {
+            this.isolationMode = isolationMode;
+        }
+        
+        /**
+         * Check if this server is in read-only mode
+         * @return true if the server is in read-only mode
+         */
+        public boolean isReadOnly() {
+            return "read-only".equalsIgnoreCase(isolationMode) || 
+                   isolationMode.contains("read-only");
+        }
+        
+        /**
+         * Check if this server has disabled isolation
+         * @return true if isolation is disabled for this server
+         */
+        public boolean isIsolationDisabled() {
+            return "disabled".equalsIgnoreCase(isolationMode) ||
+                   isolationMode.contains("disabled");
+        }
+        
+        /**
+         * Check if this is the Default Server
+         * @return true if this is the Default Server
+         */
+        public boolean isDefaultServer() {
+            return "Default Server".equals(isolationMode) ||
+                   (serverId != null && "default".equalsIgnoreCase(serverId));
+        }
+        
+        /**
+         * Check if this server is in restricted mode (read-only, disabled, or Default Server)
+         * @return true if the server has any type of restricted isolation mode
+         */
+        public boolean isRestrictedMode() {
+            return isReadOnly() || isIsolationDisabled() || isDefaultServer();
         }
         
         /**

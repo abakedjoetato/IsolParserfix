@@ -276,17 +276,47 @@ public class CsvLogIntegrator {
                 return;
             }
             
-            // Check if server is in read-only or disabled isolation mode
-            if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
-                logger.info("Server {} is in {} mode - skipping leaderboard validation", 
-                    server.getName(), server.isReadOnly() ? "read-only" : "disabled isolation");
+            // Check if server is intentionally operating in a limited isolation mode
+            boolean isRestrictedMode = "Default Server".equals(server.getName()) || 
+                                    server.isReadOnly() || 
+                                    "disabled".equalsIgnoreCase(server.getIsolationMode()) ||
+                                    "read-only".equalsIgnoreCase(server.getIsolationMode());
+                                    
+            if (isRestrictedMode) {
+                String serverMode = "Default Server".equals(server.getName()) ? "Default Server" :
+                                    server.isReadOnly() ? "read-only" :
+                                    server.getIsolationMode() + " isolation";
+                                    
+                logger.info("Server {} is in {} mode - skipping detailed leaderboard validation", 
+                    server.getName(), serverMode);
                 
-                // Still mark as valid, we're intentionally skipping validation
-                summary.setLeaderboardsValid(true);
-                summary.setTopKillsCount(0);
-                summary.setTopDeathsCount(0);
-                summary.setTopKdCount(0);
-                summary.setErrorMessage(null);
+                // For restricted mode servers, we perform a minimal validation instead of skipping entirely
+                // This ensures we verify the server can be queried without expecting data
+                com.deadside.bot.utils.GuildIsolationManager.getInstance().setContext(server.getGuildId(), server.getServerId());
+                
+                try {
+                    // Just verify we can query without errors, not expecting results
+                    playerRepository.getTopPlayersByKills(server.getGuildId(), server.getServerId(), 1);
+                    
+                    // Mark as valid with zero counts
+                    summary.setLeaderboardsValid(true);
+                    summary.setTopKillsCount(0);
+                    summary.setTopDeathsCount(0);
+                    summary.setTopKdCount(0);
+                    summary.setErrorMessage(null);
+                    
+                    logger.info("Minimal leaderboard validation successful for restricted server {}", 
+                        server.getName());
+                } catch (Exception e) {
+                    // Log but don't fail the validation
+                    logger.info("Minimal validation for restricted server {} threw exception: {}", 
+                        server.getName(), e.getMessage());
+                    summary.setLeaderboardsValid(false);
+                    summary.setErrorMessage("Restricted server validation error: " + e.getMessage());
+                } finally {
+                    com.deadside.bot.utils.GuildIsolationManager.getInstance().clearContext();
+                }
+                
                 return;
             }
             

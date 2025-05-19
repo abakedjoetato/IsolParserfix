@@ -1127,14 +1127,35 @@ public class PlayerRepository {
      */
     public List<Player> getTopPlayersByKD(long guildId, String serverId, int limit, int minKills) {
         try {
-            // Filter out players with no names and those with less than 10 kills
+            if (guildId <= 0 || serverId == null || serverId.isEmpty()) {
+                // Change from warning to informational log if this is intentional
+                if (guildId <= 0 && serverId == null) {
+                    logger.info("KD ratio leaderboard query executed with intentionally empty isolation context");
+                } else {
+                    logger.info("KD ratio leaderboard query with incomplete isolation context. Guild ID: {}, Server ID: {}", 
+                        guildId, serverId);
+                }
+                return new ArrayList<>();
+            }
+            
+            // Get GameServer to check if it's in read-only or disabled mode
+            GameServerRepository serverRepo = new GameServerRepository();
+            GameServer server = serverRepo.findByGuildIdAndServerId(guildId, serverId);
+            
+            if (server != null && (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode()))) {
+                logger.info("Server {} is in {} mode - returning empty KD ratio leaderboard as expected",
+                    server.getName(), server.isReadOnly() ? "read-only" : "disabled isolation");
+                return new ArrayList<>();
+            }
+            
+            // Filter out players with no names and those with less than minKills kills
             // This is to avoid new players with 1 kill 0 deaths having infinite KD ratio
             // Also apply proper guild and server isolation
             Bson validPlayerFilter = Filters.and(
                 Filters.exists("name"),
                 Filters.ne("name", ""),
                 Filters.ne("name", "**"),
-                Filters.gte("kills", 10),  // Minimum 10 kills to be ranked
+                Filters.gte("kills", minKills),  // Minimum kills to be ranked (usually 10)
                 Filters.eq("guildId", guildId),    // Must be from specified guild
                 Filters.eq("serverId", serverId)   // Must be from specified server
             );

@@ -308,4 +308,90 @@ public class EmbedThemes {
                 .setTimestamp(Instant.now())
                 .build();
     }
+    
+    /**
+     * Create an isolation-aware leaderboard embed with proper formatting
+     * Ensures consistent presentation even with partial or missing data
+     * @param title The leaderboard title
+     * @param description The leaderboard description or content
+     * @param isolationMode The isolation mode setting (read-only, strict, or disabled)
+     * @param serverName The name of the game server
+     * @return A formatted leaderboard embed with isolation context information
+     */
+    public static MessageEmbed isolationAwareLeaderboardEmbed(String title, String description, 
+                                                          String isolationMode, String serverName) {
+        EmbedBuilder embed = baseEmbed()
+                .setColor(DEADSIDE_SUCCESS)
+                .setTitle("📊 " + title)
+                .setDescription(description)
+                .setThumbnail(ResourceManager.getAttachmentString(ResourceManager.WEAPON_STATS_ICON));
+        
+        // Add isolation context information in the footer
+        StringBuilder footerText = new StringBuilder("Data from: ").append(serverName);
+        
+        // Show isolation mode info with improved formatting for different modes
+        if (isolationMode != null) {
+            if (isolationMode.equals("Default Server")) {
+                footerText.append(" (Default Server)");
+            } else if (isolationMode.equals("read-only") || isolationMode.contains("read-only")) {
+                footerText.append(" (Read-Only Mode)");
+            } else if (isolationMode.equals("disabled") || isolationMode.contains("disabled")) {
+                footerText.append(" (Isolation Disabled)");
+            } else if (!isolationMode.equals("standard")) {
+                footerText.append(" (").append(isolationMode).append(" mode)");
+            }
+        }
+        
+        embed.setFooter(footerText.toString(), ResourceManager.getAttachmentString(ResourceManager.MAIN_LOGO));
+        
+        return embed.build();
+    }
+    
+    /**
+     * Create a fallback embed for missing leaderboard data
+     * Used when a server is in read-only mode or data access is limited
+     * @param title The leaderboard title
+     * @param reason The reason for limited data (read-only mode, isolation setting, etc.)
+     * @param serverName The name of the game server
+     * @return A formatted embed explaining the data limitation
+     */
+    public static MessageEmbed fallbackLeaderboardEmbed(String title, String reason, String serverName) {
+        StringBuilder description = new StringBuilder();
+        
+        // Determine if this is a restricted server by examining the reason text
+        boolean isRestrictedMode = reason.contains("Default Server") || 
+                                  reason.contains("read-only") || 
+                                  reason.contains("isolation disabled");
+        
+        if (isRestrictedMode) {
+            // For restricted servers, provide a clearer explanation about the isolation mode
+            description.append("**This leaderboard is unavailable due to server configuration.**\n\n");
+            description.append("**Details:** ").append(reason).append("\n\n");
+            
+            // If it's a Default Server, provide specific guidance
+            if (reason.contains("Default Server")) {
+                description.append("The Default Server is a placeholder and doesn't provide player statistics. ");
+                description.append("Configure a game server to enable leaderboards.");
+            } else {
+                description.append("Current isolation settings prevent displaying statistics. ");
+                description.append("An administrator can change this in server settings.");
+            }
+        } else {
+            // For normal data availability issues (no data yet), use the standard message
+            description.append("No data is currently available for this leaderboard.\n\n");
+            description.append("**Reason:** ").append(reason).append("\n\n");
+            description.append("Statistics will appear here as players accumulate game data.");
+        }
+        
+        Color embedColor = isRestrictedMode ? DEADSIDE_INFO : DEADSIDE_WARNING;
+        String embedIcon = isRestrictedMode ? "ℹ️" : "⚠️";
+        
+        return baseEmbed()
+                .setColor(embedColor)
+                .setTitle(embedIcon + " " + title)
+                .setDescription(description.toString())
+                .setThumbnail(ResourceManager.getAttachmentString(ResourceManager.WEAPON_STATS_ICON))
+                .setFooter("Server: " + serverName, ResourceManager.getAttachmentString(ResourceManager.MAIN_LOGO))
+                .build();
+    }
 }
