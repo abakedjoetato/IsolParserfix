@@ -91,11 +91,37 @@ public class CsvLogIntegrator {
      */
     private void processCsvLogsWithValidation(GameServer server, ValidationSummary summary) {
         try {
+            // First check if this is a server with restricted isolation mode
+            if (server.hasRestrictedIsolation()) {
+                String serverMode = server.isDefaultServer() ? "Default Server" :
+                                  server.isReadOnly() ? "read-only" :
+                                  server.isIsolationDisabled() ? "disabled isolation" :
+                                  server.getIsolationMode() + " isolation";
+                
+                // Use informational logging instead of warnings for intentionally restricted servers
+                logger.info("Skipping CSV processing for {} server: {}", serverMode, server.getName());
+                
+                // Mark validation as successful but with empty results
+                summary.setCsvDirectoryExists(true);
+                summary.setCsvFilesCount(0);
+                summary.setCsvLinesProcessed(0);
+                summary.setCsvProcessingErrors(0);
+                
+                return;
+            }
+            
             // Check if the server deathlog directory exists
             File deathlogDir = new File(server.getDeathlogsDirectory());
             if (!deathlogDir.exists() || !deathlogDir.isDirectory()) {
-                logger.warn("Deathlog directory does not exist for server {}: {}", 
-                    server.getName(), server.getDeathlogsDirectory());
+                // Use appropriate logging level based on context
+                if ("Default Server".equals(server.getName())) {
+                    // For Default Server, this is expected behavior
+                    logger.info("Deathlog directory does not exist for Default Server: {}", 
+                        server.getDeathlogsDirectory());
+                } else {
+                    logger.warn("Deathlog directory does not exist for server {}: {}", 
+                        server.getName(), server.getDeathlogsDirectory());
+                }
                 summary.setCsvDirectoryExists(false);
                 return;
             }
@@ -216,6 +242,23 @@ public class CsvLogIntegrator {
      */
     private void processServerLogsWithValidation(GameServer server, ValidationSummary summary) {
         try {
+            // First check if this is a server with restricted isolation mode
+            if (server.hasRestrictedIsolation()) {
+                String serverMode = server.isDefaultServer() ? "Default Server" :
+                                  server.isReadOnly() ? "read-only" :
+                                  server.isIsolationDisabled() ? "disabled isolation" :
+                                  server.getIsolationMode() + " isolation";
+                
+                // Use informational logging instead of warnings for intentionally restricted servers
+                logger.info("Skipping server log processing for {} server: {}", serverMode, server.getName());
+                
+                // Mark validation as successful but with empty results
+                summary.setLogProcessingValid(true);
+                summary.setEventsProcessed(0);
+                
+                return;
+            }
+            
             // Validate log directory
             String logPath = server.getLogDirectory() + "/Deadside.log";
             
@@ -277,15 +320,15 @@ public class CsvLogIntegrator {
             }
             
             // Check if server is intentionally operating in a limited isolation mode
-            boolean isRestrictedMode = "Default Server".equals(server.getName()) || 
-                                    server.isReadOnly() || 
-                                    "disabled".equalsIgnoreCase(server.getIsolationMode()) ||
-                                    "read-only".equalsIgnoreCase(server.getIsolationMode());
+            // Use the enhanced hasRestrictedIsolation method to check all possible restriction types
+            boolean isRestrictedMode = server.hasRestrictedIsolation();
                                     
             if (isRestrictedMode) {
-                String serverMode = "Default Server".equals(server.getName()) ? "Default Server" :
-                                    server.isReadOnly() ? "read-only" :
-                                    server.getIsolationMode() + " isolation";
+                // Use consistent mode naming from the enhanced GameServer model
+                String serverMode = server.isDefaultServer() ? "Default Server" :
+                                  server.isReadOnly() ? "read-only" :
+                                  server.isIsolationDisabled() ? "disabled isolation" :
+                                  server.getIsolationMode() + " isolation";
                                     
                 logger.info("Server {} is in {} mode - skipping detailed leaderboard validation", 
                     server.getName(), serverMode);

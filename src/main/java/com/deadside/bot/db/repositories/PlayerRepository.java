@@ -1007,13 +1007,19 @@ public class PlayerRepository {
                 return new ArrayList<>();
             }
             
-            // Get GameServer to check if it's in read-only or disabled mode
+            // Get GameServer to check if it has restricted isolation
             GameServerRepository serverRepo = new GameServerRepository();
             GameServer server = serverRepo.findByGuildIdAndServerId(guildId, serverId);
             
-            if (server != null && (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode()))) {
+            if (server != null && server.hasRestrictedIsolation()) {
+                // Use consistent isolation mode naming
+                String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                     server.isReadOnly() ? "read-only" :
+                                     server.isIsolationDisabled() ? "disabled isolation" :
+                                     server.getIsolationMode();
+                
                 logger.info("Server {} is in {} mode - returning empty kills leaderboard as expected",
-                    server.getName(), server.isReadOnly() ? "read-only" : "disabled isolation");
+                    server.getName(), isolationMode);
                 return new ArrayList<>();
             }
             
@@ -1138,13 +1144,19 @@ public class PlayerRepository {
                 return new ArrayList<>();
             }
             
-            // Get GameServer to check if it's in read-only or disabled mode
+            // Get GameServer to check if it has restricted isolation
             GameServerRepository serverRepo = new GameServerRepository();
             GameServer server = serverRepo.findByGuildIdAndServerId(guildId, serverId);
             
-            if (server != null && (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode()))) {
+            if (server != null && server.hasRestrictedIsolation()) {
+                // Use consistent isolation mode naming
+                String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                     server.isReadOnly() ? "read-only" :
+                                     server.isIsolationDisabled() ? "disabled isolation" :
+                                     server.getIsolationMode();
+                
                 logger.info("Server {} is in {} mode - returning empty KD ratio leaderboard as expected",
-                    server.getName(), server.isReadOnly() ? "read-only" : "disabled isolation");
+                    server.getName(), isolationMode);
                 return new ArrayList<>();
             }
             
@@ -1275,13 +1287,19 @@ public class PlayerRepository {
                 return new ArrayList<>();
             }
             
-            // Get GameServer to check if it's in read-only or disabled mode
+            // Get GameServer to check if it has restricted isolation
             GameServerRepository serverRepo = new GameServerRepository();
             GameServer server = serverRepo.findByGuildIdAndServerId(guildId, serverId);
             
-            if (server != null && (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode()))) {
+            if (server != null && server.hasRestrictedIsolation()) {
+                // Use consistent isolation mode naming
+                String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                     server.isReadOnly() ? "read-only" :
+                                     server.isIsolationDisabled() ? "disabled isolation" :
+                                     server.getIsolationMode();
+                
                 logger.info("Server {} is in {} mode - returning empty deaths leaderboard as expected",
-                    server.getName(), server.isReadOnly() ? "read-only" : "disabled isolation");
+                    server.getName(), isolationMode);
                 return new ArrayList<>();
             }
             
@@ -1389,6 +1407,33 @@ public class PlayerRepository {
      */
     public List<Player> getTopPlayersByDistance(long guildId, String serverId, int limit) {
         try {
+            if (guildId <= 0 || serverId == null || serverId.isEmpty()) {
+                // Change from warning to informational log if this is intentional
+                if (guildId <= 0 && serverId == null) {
+                    logger.info("Distance leaderboard query executed with intentionally empty isolation context");
+                } else {
+                    logger.info("Distance leaderboard query with incomplete isolation context. Guild ID: {}, Server ID: {}", 
+                        guildId, serverId);
+                }
+                return new ArrayList<>();
+            }
+            
+            // Get GameServer to check if it has restricted isolation
+            GameServerRepository serverRepo = new GameServerRepository();
+            GameServer server = serverRepo.findByGuildIdAndServerId(guildId, serverId);
+            
+            if (server != null && server.hasRestrictedIsolation()) {
+                // Use consistent isolation mode naming
+                String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                     server.isReadOnly() ? "read-only" :
+                                     server.isIsolationDisabled() ? "disabled isolation" :
+                                     server.getIsolationMode();
+                
+                logger.info("Server {} is in {} mode - returning empty distance leaderboard as expected",
+                    server.getName(), isolationMode);
+                return new ArrayList<>();
+            }
+            
             // Filter invalid players with proper isolation
             Bson filter = Filters.and(
                 Filters.exists("name"),                // Name must exist
@@ -1494,6 +1539,33 @@ public class PlayerRepository {
      */
     public List<Player> getTopPlayersByKillStreak(long guildId, String serverId, int limit) {
         try {
+            if (guildId <= 0 || serverId == null || serverId.isEmpty()) {
+                // Change from warning to informational log if this is intentional
+                if (guildId <= 0 && serverId == null) {
+                    logger.info("Kill streak leaderboard query executed with intentionally empty isolation context");
+                } else {
+                    logger.info("Kill streak leaderboard query with incomplete isolation context. Guild ID: {}, Server ID: {}", 
+                        guildId, serverId);
+                }
+                return new ArrayList<>();
+            }
+            
+            // Get GameServer to check if it has restricted isolation
+            GameServerRepository serverRepo = new GameServerRepository();
+            GameServer server = serverRepo.findByGuildIdAndServerId(guildId, serverId);
+            
+            if (server != null && server.hasRestrictedIsolation()) {
+                // Use consistent isolation mode naming
+                String isolationMode = server.isDefaultServer() ? "Default Server" :
+                                     server.isReadOnly() ? "read-only" :
+                                     server.isIsolationDisabled() ? "disabled isolation" :
+                                     server.getIsolationMode();
+                
+                logger.info("Server {} is in {} mode - returning empty kill streak leaderboard as expected",
+                    server.getName(), isolationMode);
+                return new ArrayList<>();
+            }
+            
             // Filter invalid players with proper isolation
             Bson filter = Filters.and(
                 Filters.exists("name"),                // Name must exist
