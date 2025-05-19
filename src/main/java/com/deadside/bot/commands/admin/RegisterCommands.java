@@ -24,11 +24,15 @@ public class RegisterCommands {
             OrphanCleanupCommand orphanCleanupCommand = new OrphanCleanupCommand();
             DatabaseResetCommand databaseResetCommand = new DatabaseResetCommand();
             RunCleanupOnStartupCommand runCleanupOnStartupCommand = new RunCleanupOnStartupCommand();
+            ServerCommand serverCommand = new ServerCommand();
+            SftpConfigCommand sftpConfigCommand = new SftpConfigCommand();
             
             // Register the commands
             commandManager.registerCommand(orphanCleanupCommand);
             commandManager.registerCommand(databaseResetCommand);
             commandManager.registerCommand(runCleanupOnStartupCommand);
+            commandManager.registerCommand(serverCommand);
+            commandManager.registerCommand(sftpConfigCommand);
             
             logger.info("Registered admin database commands");
         } catch (Exception e) {

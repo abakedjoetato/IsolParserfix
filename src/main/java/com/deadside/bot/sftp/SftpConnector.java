@@ -47,16 +47,67 @@ public class SftpConnector {
         ChannelSftp channel = null;
         
         try {
-            session = jsch.getSession(server.getUsername(), server.getHost(), server.getPort());
-            session.setPassword(server.getPassword());
+            // First try with SFTP-specific credentials if available
+            if (server.isUseSftpForLogs() && server.getSftpHost() != null && !server.getSftpHost().isEmpty()) {
+                try {
+                    String sftp_user = server.getSftpUsername() != null && !server.getSftpUsername().isEmpty() ? 
+                        server.getSftpUsername() : server.getUsername();
+                    
+                    String sftp_password = server.getSftpPassword() != null && !server.getSftpPassword().isEmpty() ? 
+                        server.getSftpPassword() : server.getPassword();
+                        
+                    int sftp_port = server.getSftpPort() > 0 ? server.getSftpPort() : 22;
+                    
+                    logger.info("Attempting SFTP connection to {} using dedicated SFTP credentials", server.getSftpHost());
+                    
+                    session = jsch.getSession(sftp_user, server.getSftpHost(), sftp_port);
+                    session.setPassword(sftp_password);
+                    
+                    Properties config = new Properties();
+                    config.put("StrictHostKeyChecking", "no");
+                    session.setConfig(config);
+                    session.setTimeout(timeout);
+                    
+                    session.connect();
+                } catch (JSchException e) {
+                    // Log the error and try with fallback credentials
+                    logger.warn("SFTP connection with dedicated credentials failed: {}. Trying fallback credentials.", e.getMessage());
+                    
+                    // Close the session if it was created
+                    if (session != null && session.isConnected()) {
+                        session.disconnect();
+                        session = null;
+                    }
+                    
+                    // Throw if this is a dedicated SFTP configuration without fallback
+                    if (!server.hasSftpConfig()) {
+                        throw e;
+                    }
+                }
+            }
             
-            Properties config = new Properties();
-            config.put("StrictHostKeyChecking", "no");
-            session.setConfig(config);
-            session.setTimeout(timeout);
+            // If first attempt failed or no SFTP-specific credentials, try regular credentials
+            if (session == null || !session.isConnected()) {
+                if (server.getUsername() != null && !server.getUsername().isEmpty() && 
+                    server.getHost() != null && !server.getHost().isEmpty()) {
+                    
+                    logger.info("Attempting fallback SFTP connection to {} using regular credentials", server.getHost());
+                    
+                    session = jsch.getSession(server.getUsername(), server.getHost(), server.getPort());
+                    session.setPassword(server.getPassword());
+                    
+                    Properties config = new Properties();
+                    config.put("StrictHostKeyChecking", "no");
+                    session.setConfig(config);
+                    session.setTimeout(timeout);
+                    
+                    session.connect();
+                } else {
+                    throw new JSchException("No valid SFTP configuration available");
+                }
+            }
             
-            session.connect();
-            
+            // Open SFTP channel
             channel = (ChannelSftp) session.openChannel("sftp");
             channel.connect();
             
@@ -91,8 +142,14 @@ public class SftpConnector {
             } else if (server != null && "Default Server".equals(server.getName())) {
                 logger.info("SFTP connection not available for Default Server. This is expected and non-blocking.");
             } else {
-                logger.info("SFTP connection failed for server: {}. Features requiring SFTP will be gracefully skipped.", 
-                    server != null ? server.getName() : "unknown");
+                // Log the detailed error message for better debugging
+                logger.warn("SFTP connection failed for server: {}. Error: {}. Stack trace for diagnostic purposes:", 
+                    server != null ? server.getName() : "unknown", e.getMessage(), e);
+                logger.info("SFTP connection failed for server: {}. Using host: {}, port: {}, username: {}. Features requiring SFTP will be gracefully skipped.", 
+                    server != null ? server.getName() : "unknown", 
+                    server != null ? server.getHost() : "unknown",
+                    server != null ? server.getPort() : 0,
+                    server != null ? server.getUsername() : "unknown");
             }
             return false;
         }
@@ -663,45 +720,89 @@ public class SftpConnector {
             if (guildId > 0) {
                 com.deadside.bot.utils.GuildIsolationManager.getInstance().setContext(guildId, serverId);
                 try {
-                    // Validate SFTP configuration before attempting connection
-                    if (server.getSftpHost() == null || server.getSftpHost().trim().isEmpty()) {
-                        // Check if this is Default Server or a read-only/disabled server
-                        if ("Default Server".equals(server.getName())) {
-                            logger.info("Server Default Server has proper isolation but missing SFTP host configuration (Guild={})", guildId);
-                        } else if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
-                            logger.info("Server {} is in {} mode - SFTP connection skipped intentionally (Guild={})",
-                                server.getName(), 
-                                server.isReadOnly() ? "read-only" : "disabled isolation", 
-                                guildId);
-                        } else {
-                            logger.info("Server {} has proper isolation but missing SFTP host configuration (Guild={})",
-                                server.getName(), guildId);
-                        }
+                    // Special handling for Default Server or restricted servers
+                    if ("Default Server".equals(server.getName())) {
+                        logger.info("Server Default Server has proper isolation but SFTP connections are not needed (Guild={})", guildId);
+                        return null;
+                    } else if (server.isReadOnly() || "disabled".equalsIgnoreCase(server.getIsolationMode())) {
+                        logger.info("Server {} is in {} mode - SFTP connection skipped intentionally (Guild={})",
+                            server.getName(), 
+                            server.isReadOnly() ? "read-only" : "disabled isolation", 
+                            guildId);
                         return null;
                     }
                     
-                    // Proceed with SFTP connection using proper isolation
-                    JSch jsch = new JSch();
-                    Session session = jsch.getSession(
-                        server.getSftpUsername() != null ? server.getSftpUsername() : "anonymous",
-                        server.getSftpHost(),
-                        server.getSftpPort() > 0 ? server.getSftpPort() : 22
-                    );
-                    
-                    // Set password if available
-                    if (server.getSftpPassword() != null && !server.getSftpPassword().isEmpty()) {
-                        session.setPassword(server.getSftpPassword());
+                    // First try to connect with dedicated SFTP credentials if available
+                    Session session = null;
+                    if (server.isUseSftpForLogs() && server.getSftpHost() != null && !server.getSftpHost().trim().isEmpty()) {
+                        try {
+                            String sftp_user = server.getSftpUsername() != null && !server.getSftpUsername().trim().isEmpty() ? 
+                                server.getSftpUsername() : server.getUsername();
+                            
+                            String sftp_password = server.getSftpPassword() != null && !server.getSftpPassword().trim().isEmpty() ? 
+                                server.getSftpPassword() : server.getPassword();
+                                
+                            int sftp_port = server.getSftpPort() > 0 ? server.getSftpPort() : 22;
+                            
+                            logger.info("Attempting SFTP connection to {} using dedicated SFTP credentials for server {}", 
+                                server.getSftpHost(), server.getName());
+                            
+                            JSch jsch = new JSch();
+                            session = jsch.getSession(sftp_user, server.getSftpHost(), sftp_port);
+                            session.setPassword(sftp_password);
+                            
+                            Properties config = new Properties();
+                            config.put("StrictHostKeyChecking", "no");
+                            session.setConfig(config);
+                            
+                            session.connect(timeout);
+                            logger.info("Successfully connected to SFTP server {} with dedicated credentials", server.getSftpHost());
+                            
+                            return session;
+                        } catch (Exception e) {
+                            logger.warn("Failed to connect with SFTP-specific credentials: {}. Will try fallback credentials.", e.getMessage());
+                            
+                            // Close session if it was created but not connected
+                            if (session != null && session.isConnected()) {
+                                session.disconnect();
+                                session = null;
+                            }
+                        }
                     }
                     
-                    Properties config = new Properties();
-                    config.put("StrictHostKeyChecking", "no");
-                    session.setConfig(config);
-                    
-                    session.connect(timeout);
-                    
-                    logger.debug("Created SFTP session for server {} with proper isolation (Guild={})",
-                        server.getName(), guildId);
-                    return session;
+                    // Fallback to standard credentials if SFTP-specific credentials failed or weren't provided
+                    if (server.getHost() != null && !server.getHost().trim().isEmpty() && 
+                        server.getUsername() != null && !server.getUsername().trim().isEmpty()) {
+                        
+                        try {
+                            logger.info("Attempting fallback SFTP connection to {}:{} with username {} for server {}",
+                                server.getHost(), server.getPort(), server.getUsername(), server.getName());
+                            
+                            JSch jsch = new JSch();
+                            session = jsch.getSession(server.getUsername(), server.getHost(), server.getPort());
+                            
+                            if (server.getPassword() != null && !server.getPassword().isEmpty()) {
+                                session.setPassword(server.getPassword());
+                            }
+                            
+                            Properties config = new Properties();
+                            config.put("StrictHostKeyChecking", "no");
+                            session.setConfig(config);
+                            
+                            session.connect(timeout);
+                            logger.info("Successfully connected to SFTP server {}:{} with fallback credentials", 
+                                server.getHost(), server.getPort());
+                            
+                            return session;
+                        } catch (Exception e) {
+                            logger.error("All SFTP connection attempts failed for server {}: {}", 
+                                server.getName(), e.getMessage());
+                            return null;
+                        }
+                    } else {
+                        logger.warn("No valid SFTP credentials available for server {}", server.getName());
+                        return null;
+                    }
                 } finally {
                     // Always clear isolation context when done to prevent leaks
                     com.deadside.bot.utils.GuildIsolationManager.getInstance().clearContext();

@@ -48,6 +48,7 @@ com/deadside/bot/utils/EmbedUtils.class
 com/deadside/bot/Main.class
 com/deadside/bot/commands/economy/BlackjackCommand$BlackjackGame$GameResult.class
 com/deadside/bot/commands/admin/ValidateParserCommand.class
+com/deadside/bot/commands/admin/SftpConfigCommand.class
 com/deadside/bot/isolation/IsolationCommandContext.class
 com/deadside/bot/utils/DataIsolationMigration.class
 com/deadside/bot/bot/DeadsideBot.class

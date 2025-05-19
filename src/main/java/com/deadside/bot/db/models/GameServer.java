@@ -134,6 +134,12 @@ public class GameServer {
         this(serverId, name, ipAddress, port, guildId);
         this.username = username;
         this.password = password;
+        // Also set SFTP credentials to match the main credentials
+        this.sftpUsername = username;
+        this.sftpPassword = password;
+        this.sftpHost = ipAddress;
+        this.sftpPort = port;
+        this.useSftpForLogs = true;
     }
     
     /**
@@ -142,6 +148,11 @@ public class GameServer {
     public GameServer(String serverId, String name, int port, String ipAddress, String username, long guildId) {
         this(serverId, name, ipAddress, port, guildId);
         this.username = username;
+        // Also set SFTP credentials to match
+        this.sftpUsername = username;
+        this.sftpHost = ipAddress;
+        this.sftpPort = port;
+        this.useSftpForLogs = true;
     }
     
     public ObjectId getId() {
@@ -335,7 +346,16 @@ public class GameServer {
      * Check if this server has SFTP configuration
      */
     public boolean hasSftpConfig() {
-        return useSftpForLogs && !sftpHost.isEmpty() && !sftpUsername.isEmpty() && !sftpPassword.isEmpty();
+        boolean hasSftpSpecificConfig = useSftpForLogs && 
+                                       sftpHost != null && !sftpHost.isEmpty() && 
+                                       sftpUsername != null && !sftpUsername.isEmpty() && 
+                                       sftpPassword != null && !sftpPassword.isEmpty();
+                                       
+        boolean hasFallbackConfig = host != null && !host.isEmpty() && 
+                                   username != null && !username.isEmpty() && 
+                                   password != null && !password.isEmpty();
+        
+        return hasSftpSpecificConfig || hasFallbackConfig;
     }
     
     /**

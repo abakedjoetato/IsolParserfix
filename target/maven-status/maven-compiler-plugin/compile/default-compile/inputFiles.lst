@@ -53,6 +53,7 @@
 /home/runner/workspace/src/main/java/com/deadside/bot/isolation/IsolationBootstrap.java
 /home/runner/workspace/src/main/java/com/deadside/bot/parsers/fixes/CsvParsingFix.java
 /home/runner/workspace/src/main/java/com/deadside/bot/db/models/Currency.java
+/home/runner/workspace/src/main/java/com/deadside/bot/commands/admin/SftpConfigCommand.java
 /home/runner/workspace/src/main/java/com/deadside/bot/utils/DataBoundary.java
 /home/runner/workspace/src/main/java/com/deadside/bot/commands/admin/ProcessHistoricalDataCommand.java
 /home/runner/workspace/src/main/java/com/deadside/bot/listeners/ButtonListener.java

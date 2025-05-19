@@ -154,17 +154,30 @@ public class ServerCommand implements ICommand {
         
         // Create new server
         GameServer gameServer = new GameServer(
-                guild.getIdLong(),
+                String.valueOf(gameServerId),
                 name,
-                host,
                 port,
+                host,
                 username,
                 password,
-                gameServerId
+                guild.getIdLong()
         );
+        
+        // Configure SFTP settings explicitly
+        gameServer.setUseSftpForLogs(true);
+        gameServer.setSftpHost(host);
+        gameServer.setSftpPort(port);
+        gameServer.setSftpUsername(username);
+        gameServer.setSftpPassword(password);
+        
+        // Ensure regular credentials match SFTP credentials for consistency and fallback
+        gameServer.setHost(host);
+        gameServer.setUsername(username);
+        gameServer.setPassword(password);
         
         // Test the connection first
         try {
+            logger.info("Testing SFTP connection to server {} ({}:{})", name, host, port);
             boolean connectionResult = sftpManager.testConnection(gameServer);
             if (!connectionResult) {
                 event.getHook().sendMessageEmbeds(
