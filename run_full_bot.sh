@@ -28,6 +28,21 @@ mkdir -p data/logs
 mkdir -p data/deathlogs
 mkdir -p logs
 
+# Create backups directory if it doesn't exist
+mkdir -p backups
+
+# Create test data if it doesn't exist
+if [ ! -f backups/2025.05.15-00.00.00.csv ]; then
+  echo -e "${YELLOW}Creating sample test data...${NC}"
+  cat > backups/2025.05.15-00.00.00.csv << 'EOF'
+2025-05-15 00:00:01,kill,Player1,Player2,AK-47,137.5
+2025-05-15 00:01:12,kill,Player3,Player4,MP5,42.8
+2025-05-15 00:02:33,kill,Player2,Player3,M4A1,88.2
+2025-05-15 00:03:44,kill,Player1,Player4,SVD,242.1
+2025-05-15 00:04:55,kill,Player4,Player1,Knife,5.3
+EOF
+fi
+
 # Copy test data if it doesn't exist
 if [ ! -f data/deathlogs/2025.05.15-00.00.00.csv ]; then
   echo -e "${YELLOW}Copying test data...${NC}"

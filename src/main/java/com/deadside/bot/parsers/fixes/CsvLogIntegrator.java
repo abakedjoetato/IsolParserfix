@@ -402,6 +402,12 @@ public class CsvLogIntegrator {
     /**
      * Class to hold validation results
      */
+    /**
+     * Class to hold validation results
+     */
+    /**
+     * Class to hold validation results
+     */
     public static class ValidationSummary {
         private String serverName;
         private long startTimestamp;
@@ -412,8 +418,10 @@ public class CsvLogIntegrator {
         // CSV validation
         private boolean csvDirectoryExists;
         private int csvFilesFound;
+        private int csvFilesCount;
         private int csvLinesProcessed;
         private int csvErrors;
+        private int csvProcessingErrors;
         private int playersCreated;
         private int totalKills;
         private int totalDeaths;
@@ -430,29 +438,243 @@ public class CsvLogIntegrator {
         private boolean leaderboardsValid;
         private int topKillsCount;
         private int topDeathsCount;
+        private int topKdCount;
         
-        /**
-         * Check if this validation summary indicates a valid state
-         * @return true if the validation is valid
-         */
         public boolean isValid() {
             return successful && (errorMessage == null || errorMessage.isEmpty());
         }
-        private int topKdCount;
         
-        // Getters and setters
+        public boolean isSuccessful() {
+            return successful;
+        }
         
-        public String getServerName() { return serverName; }
-        public void setServerName(String serverName) { this.serverName = serverName; }
+        public String getServerName() {
+            return serverName;
+        }
         
-        public long getStartTimestamp() { return startTimestamp; }
-        public void setStartTimestamp(long startTimestamp) { this.startTimestamp = startTimestamp; }
+        public void setServerName(String serverName) {
+            this.serverName = serverName;
+        }
         
-        public long getEndTimestamp() { return endTimestamp; }
-        public void setEndTimestamp(long endTimestamp) { this.endTimestamp = endTimestamp; }
+        public void setStartTimestamp(long startTimestamp) {
+            this.startTimestamp = startTimestamp;
+        }
         
-        public boolean isSuccessful() { return successful; }
-        public void setSuccessful(boolean successful) { this.successful = successful; }
+        public void setEndTimestamp(long endTimestamp) {
+            this.endTimestamp = endTimestamp;
+        }
+        
+        public void setSuccessful(boolean successful) {
+            this.successful = successful;
+        }
+        
+        public void setErrorMessage(String errorMessage) {
+            this.errorMessage = errorMessage;
+        }
+        
+        public void setCsvDirectoryExists(boolean csvDirectoryExists) {
+            this.csvDirectoryExists = csvDirectoryExists;
+        }
+        
+        public void setCsvFilesFound(int csvFilesFound) {
+            this.csvFilesFound = csvFilesFound;
+        }
+        
+        public void setCsvFilesCount(int csvFilesCount) {
+            this.csvFilesCount = csvFilesCount;
+        }
+        
+        public void setCsvLinesProcessed(int csvLinesProcessed) {
+            this.csvLinesProcessed = csvLinesProcessed;
+        }
+        
+        public void setCsvErrors(int csvErrors) {
+            this.csvErrors = csvErrors;
+        }
+        
+        public void setCsvProcessingErrors(int csvProcessingErrors) {
+            this.csvProcessingErrors = csvProcessingErrors;
+        }
+        
+        public void setPlayersCreated(int playersCreated) {
+            this.playersCreated = playersCreated;
+        }
+        
+        public void setTotalKills(int totalKills) {
+            this.totalKills = totalKills;
+        }
+        
+        public void setTotalDeaths(int totalDeaths) {
+            this.totalDeaths = totalDeaths;
+        }
+        
+        public void setTotalSuicides(int totalSuicides) {
+            this.totalSuicides = totalSuicides;
+        }
+        
+        public void setStatCorrections(int statCorrections) {
+            this.statCorrections = statCorrections;
+        }
+        
+        public boolean isLogFileExists() {
+            return logFileExists;
+        }
+        
+        public void setLogFileExists(boolean logFileExists) {
+            this.logFileExists = logFileExists;
+        }
+        
+        public void setLogProcessingValid(boolean logProcessingValid) {
+            this.logProcessingValid = logProcessingValid;
+        }
+        
+        public int getLogEventsProcessed() {
+            return logEventsProcessed;
+        }
+        
+        public void setLogEventsProcessed(int logEventsProcessed) {
+            this.logEventsProcessed = logEventsProcessed;
+        }
+        
+        public void setEventsProcessed(int eventsProcessed) {
+            this.eventsProcessed = eventsProcessed;
+        }
+        
+        public void setLeaderboardsValid(boolean leaderboardsValid) {
+            this.leaderboardsValid = leaderboardsValid;
+        }
+        
+        public void setTopKillsCount(int topKillsCount) {
+            this.topKillsCount = topKillsCount;
+        }
+        
+        public void setTopDeathsCount(int topDeathsCount) {
+            this.topDeathsCount = topDeathsCount;
+        }
+        
+        public void setTopKdCount(int topKdCount) {
+            this.topKdCount = topKdCount;
+        }
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Validation Summary for ").append(serverName).append("\n");
+            sb.append("Status: ").append(successful ? "SUCCESS" : "FAILURE").append("\n");
+            
+            if (errorMessage != null && !errorMessage.isEmpty()) {
+                sb.append("Error: ").append(errorMessage).append("\n");
+            }
+            
+            return sb.toString();
+        }
+    }
+        // Method to check if the validation was successful
+        public boolean isSuccessful() {
+            return successful;
+        }
+        
+        // Getter for server name
+        public String getServerName() { 
+            return serverName; 
+        }
+        
+        // Setter methods for all fields
+        public void setServerName(String serverName) {
+            this.serverName = serverName;
+        }
+        
+        public void setStartTimestamp(long startTimestamp) {
+            this.startTimestamp = startTimestamp;
+        }
+        
+        public void setEndTimestamp(long endTimestamp) {
+            this.endTimestamp = endTimestamp;
+        }
+        
+        public void setSuccessful(boolean successful) {
+            this.successful = successful;
+        }
+        
+        public void setErrorMessage(String errorMessage) {
+            this.errorMessage = errorMessage;
+        }
+        
+        public void setCsvDirectoryExists(boolean csvDirectoryExists) {
+            this.csvDirectoryExists = csvDirectoryExists;
+        }
+        
+        public void setCsvFilesFound(int csvFilesFound) {
+            this.csvFilesFound = csvFilesFound;
+        }
+        
+        public void setCsvFilesCount(int csvFilesCount) {
+            this.csvFilesCount = csvFilesCount;
+        }
+        
+        public void setCsvLinesProcessed(int csvLinesProcessed) {
+            this.csvLinesProcessed = csvLinesProcessed;
+        }
+        
+        public void setCsvErrors(int csvErrors) {
+            this.csvErrors = csvErrors;
+        }
+        
+        public void setCsvProcessingErrors(int csvProcessingErrors) {
+            this.csvProcessingErrors = csvProcessingErrors;
+        }
+        
+        public void setPlayersCreated(int playersCreated) {
+            this.playersCreated = playersCreated;
+        }
+        
+        public void setTotalKills(int totalKills) {
+            this.totalKills = totalKills;
+        }
+        
+        public void setTotalDeaths(int totalDeaths) {
+            this.totalDeaths = totalDeaths;
+        }
+        
+        public void setTotalSuicides(int totalSuicides) {
+            this.totalSuicides = totalSuicides;
+        }
+        
+        public void setStatCorrections(int statCorrections) {
+            this.statCorrections = statCorrections;
+        }
+        
+        public void setLogFileExists(boolean logFileExists) {
+            this.logFileExists = logFileExists;
+        }
+        
+        public void setLogProcessingValid(boolean logProcessingValid) {
+            this.logProcessingValid = logProcessingValid;
+        }
+        
+        public void setLogEventsProcessed(int logEventsProcessed) {
+            this.logEventsProcessed = logEventsProcessed;
+        }
+        
+        public void setEventsProcessed(int eventsProcessed) {
+            this.eventsProcessed = eventsProcessed;
+        }
+        
+        public void setLeaderboardsValid(boolean leaderboardsValid) {
+            this.leaderboardsValid = leaderboardsValid;
+        }
+        
+        public void setTopKillsCount(int topKillsCount) {
+            this.topKillsCount = topKillsCount;
+        }
+        
+        public void setTopDeathsCount(int topDeathsCount) {
+            this.topDeathsCount = topDeathsCount;
+        }
+        
+        public void setTopKdCount(int topKdCount) {
+            this.topKdCount = topKdCount;
+        }
         
         public String getErrorMessage() { return errorMessage; }
         public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
@@ -539,4 +761,3 @@ public class CsvLogIntegrator {
             return sb.toString();
         }
     }
-}

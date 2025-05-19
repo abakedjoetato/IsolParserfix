@@ -1,6 +1,7 @@
 package com.deadside.bot.db.repositories;
 
 import com.deadside.bot.db.MongoDBConnection;
+import com.deadside.bot.db.models.GameServer;
 import com.deadside.bot.db.models.Player;
 import com.deadside.bot.utils.GuildIsolationManager;
 import com.mongodb.client.MongoCollection;
