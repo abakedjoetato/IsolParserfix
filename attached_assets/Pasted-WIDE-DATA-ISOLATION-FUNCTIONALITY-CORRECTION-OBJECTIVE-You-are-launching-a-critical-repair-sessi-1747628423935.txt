@@ -1,0 +1,164 @@
+WIDE DATA ISOLATION & FUNCTIONALITY CORRECTION
+
+OBJECTIVE
+
+You are launching a critical repair session to diagnose and resolve system-wide data fragmentation, isolation failures, and inaccurate bot behavior across all core systems. This Discord bot must support multiple servers within multiple Discord guilds, each with full data isolation and integrity.
+
+The bot's current functionality is broken at a fundamental level:
+
+Data is leaking between servers or guilds
+
+Records are not being deleted, updated, or retrieved correctly
+
+State and behavior are desynchronized or inconsistently referenced
+
+
+You must identify and resolve every source of breakdown, misrouting, contamination, and inaccuracy.
+
+All fixes must be completed as a single, uninterrupted batch job with zero speculative fixes, commits, checkpoints, or output until the entire system is fully verified.
+
+
+---
+
+PHASE 0 — PROJECT INIT (REQUIRED)
+
+1. Unzip the uploaded .zip file from the attached assets
+
+
+2. Move all contents from the unzipped directory to the project root
+
+
+3. Clean up:
+
+Remove any nested or duplicate folders (e.g., project/, DeadsideBot/)
+
+Delete empty folders or broken symbolic links
+
+
+
+4. Scan and log the following:
+
+Main class (with main() entrypoint)
+
+All parser classes
+
+Config files (.env or config.properties)
+
+All command/event handler classes
+
+MongoDB service utilities
+
+Any duplicate or unused files
+
+
+
+5. Detect or create a .env or config.properties file
+
+
+6. Load secrets from Replit, including:
+
+BOT_TOKEN
+
+MONGO_URI
+
+
+
+7. Start the bot using JDA 5.x and confirm startup:
+
+Bot must log in and connect to Discord successfully
+
+Console logs must confirm gateway connection and guild presence
+
+
+
+
+> If Phase 0 fails, halt execution.
+
+
+
+
+---
+
+PHASE 1 — FULL-SYSTEM DATA MODEL AND ISOLATION AUDIT
+
+Core Mission:
+
+Audit every functional layer of the bot for structural issues that violate data isolation, state accuracy, or server/guild segregation.
+
+Audit & Fix Checklist:
+
+[ ] Confirm that every MongoDB document is scoped by both:
+
+Discord guild ID
+
+Internal server instance ID (per-guild)
+
+
+[ ] Validate that:
+
+Stats, logs, killfeeds, factions, currencies, bounties, players are all isolated per server and per guild
+
+
+[ ] Ensure no queries use shared global collections without proper filters
+
+[ ] Fix any logic where:
+
+Server data is cached globally
+
+Handlers reuse shared memory or stale references
+
+Embedded IDs are not being verified against the command’s invoking context
+
+
+[ ] Confirm proper deletion on server removal or reset
+
+[ ] Fix command-side memory, cooldowns, and flag logic to honor per-guild/server session states
+
+[ ] Ensure /link, /unlink, and parser assignments tie properly to isolated server records
+
+
+Functional Integration Checks:
+
+[ ] Confirm command outputs call the correct data for the active server
+
+[ ] Fix any controller or logic path that pulls from incorrect or shared contexts
+
+[ ] Validate that all bounties, stats, economy transactions, and embeds reflect only the server they originate from
+
+
+
+---
+
+VALIDATION CRITERIA
+
+The task is only considered complete when all of the following are true:
+
+[✓] All systems properly isolate guild and server data
+
+[✓] Commands reflect accurate, isolated results from their invoking context
+
+[✓] No user or server can access or affect another server’s data
+
+[✓] The bot compiles, connects, and logs no runtime errors
+
+[✓] MongoDB queries are fully scoped and data integrity is restored
+
+[✓] All deletion, creation, and update behaviors function correctly
+
+
+
+---
+
+EXECUTION RULES — NON-NEGOTIABLE
+
+You must complete all phases as one atomic batch
+
+No checkpoints, partial logs, or intermediate commits are allowed
+
+Do not output anything until all verification points are passed
+
+Do not assume functionality—prove all fixes through live runtime behavior
+
+This task is only done when the bot behaves accurately, consistently, and cleanly in real execution
+
+

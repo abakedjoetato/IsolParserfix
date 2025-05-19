@@ -1,0 +1,38 @@
+package com.deadside.bot;
+
+import com.deadside.bot.isolation.IsolationBootstrap;
+import com.deadside.bot.utils.DataIsolationMigration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Simplified Main class for testing data isolation implementation
+ */
+public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    
+    public static void main(String[] args) {
+        try {
+            logger.info("Starting Deadside Discord Bot data isolation test...");
+            
+            String mongoUri = System.getenv("MONGO_URI");
+            if (mongoUri == null || mongoUri.isEmpty()) {
+                throw new IllegalStateException("MONGO_URI environment variable not set");
+            }
+            
+            // Initialize the data isolation system
+            logger.info("Initializing data isolation system...");
+            IsolationBootstrap.getInstance().initialize();
+            
+            // Run data migration
+            logger.info("Running data isolation migration...");
+            String migrationResult = DataIsolationMigration.migrateAllData();
+            logger.info("Migration results: {}", migrationResult);
+            
+            logger.info("Data isolation test completed successfully");
+        } catch (Exception e) {
+            logger.error("Failed to run data isolation test", e);
+            e.printStackTrace();
+        }
+    }
+}

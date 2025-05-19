@@ -1,0 +1,212 @@
+CSV STAT FLOW + LOG PARSER VALIDATION
+
+OBJECTIVE
+
+You are launching a multi-phase diagnostic and validation session to inspect and repair two foundational systems within the bot:
+
+1. CSV parsing and statistical accuracy — including data flow from .csv ingestion through stat creation and leaderboard display
+
+
+2. Deadside.log event parsing and embed routing — ensuring logs are parsed, events are detected, and resets are handled on new log creation
+
+
+
+All phases must be completed in sequence and executed as unified batch fixes. No commits, logs, reports, or output are allowed until all validation criteria are met.
+
+
+---
+
+PHASE 1 — CSV PARSING → STATS → LEADERBOARD FLOW VALIDATION
+
+Purpose:
+
+Conduct an exhaustive examination of the entire CSV ingestion pipeline, including data parsing, stat creation, storage, and leaderboard display. All PvP and player-based stats must be:
+
+Correctly parsed from .csv files
+
+Accurately stored per guild/server
+
+Converted into usable leaderboard metrics
+
+Displayed with correct values in Discord embeds
+
+
+Required Audit:
+
+[ ] Confirm all kill-related CSV fields are parsed:
+
+Timestamp
+
+Killer Name / ID
+
+Victim Name / ID
+
+Weapon
+
+Distance
+
+Console IDs
+
+
+[ ] Validate that the parser:
+
+Distinguishes suicides, self-kills, falls
+
+Does not skip blank killer/victim entries without marking them correctly
+
+Resets or syncs last processed line logic properly
+
+
+[ ] Inspect all stat categories:
+
+Kills
+
+Deaths
+
+KDR
+
+Best weapon
+
+Kill streak
+
+Suicide tracking
+
+Faction aggregates
+
+Top kill targets / top victimizers
+
+
+[ ] Trace stat creation logic from parser → stat handler → MongoDB:
+
+Confirm proper scoping by guild and server
+
+Detect any missed or misrouted writes
+
+Compare processed line count to stored data
+
+
+[ ] Leaderboard Audit:
+
+Validate that leaderboard commands pull accurate data
+
+Ensure leaderboard embeds use the correct stat source
+
+Confirm formatting logic and category sorting
+
+
+
+Fixes:
+
+Align stat generation with full .csv content and normalize values
+
+Make sure each player’s record aggregates all relevant lines
+
+Ensure embeds reflect true backend values with no hardcoded or outdated stats
+
+
+Validation:
+
+Use provided .csv sample files
+
+Log stats stored and compare to raw line inputs
+
+Test leaderboard output and confirm consistency across guilds
+
+Confirm all calculations are reproducible and logic is centralized
+
+
+
+---
+
+PHASE 2 — DEADSIDE.LOG PARSER + EMBED VALIDATION
+
+Objective:
+
+Verify that the log parser correctly processes Deadside server events, user connections/disconnects, and other triggers (e.g., missions, trader events, crashes, etc.). It must detect when a new Deadside.log file is created and reset its line memory accordingly.
+
+Key Audit Points:
+
+[ ] Confirm the log parser:
+
+Tracks last processed line
+
+Detects when Deadside.log is rotated (renamed) and resets accordingly
+
+Restarts parsing cleanly on log rollover without data loss
+
+
+[ ] Validate line-by-line output processing:
+
+Joins and disconnects
+
+Player queues
+
+Airdrops, missions, helicrashes, traders
+
+
+[ ] Confirm parsed events trigger:
+
+Themed, formatted embed messages
+
+Routed to correct Discord channel(s)
+
+No duplicate or skipped events occur
+
+
+[ ] Embed Audit:
+
+Embed uses modern formatting
+
+Contains thumbnail (main.png or context-specific)
+
+Footer: Powered by Discord.gg/EmeraldServers
+
+Pulls correct server/guild context
+
+No flat messages or outdated embed style remain
+
+
+
+Validation:
+
+Simulate log rotation by swapping Deadside.log with renamed version
+
+Trigger all major event types from a test file
+
+Validate embeds are sent, unique, correct, and match game data
+
+Confirm full line reset and memory resync upon log change
+
+
+
+---
+
+COMPLETION CRITERIA
+
+Only print success when:
+
+[✓] All .csv lines are parsed and properly generate accurate stats
+
+[✓] All stats are stored correctly per guild and server
+
+[✓] Leaderboards use updated and accurate backend data
+
+[✓] Deadside.log parser detects log rotations and resets parsing window
+
+[✓] All event embeds are themed, complete, and correctly routed
+
+[✓] Bot compiles, runs, connects, and produces real-time validated outputs
+
+
+
+---
+
+EXECUTION RULES
+
+No checkpoints, reports, or commits until all validation is complete
+
+No trial and error — fixes must be designed and confirmed via real test cases
+
+All logic must be handled in a single, uninterrupted session
+
+A task is not considered done until it has passed all validation points in production behavior
