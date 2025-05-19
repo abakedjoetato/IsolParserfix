@@ -24,3 +24,7 @@ args = "./run_full_bot.sh"
 
 [deployment]
 run = ["sh", "-c", "./run_full_bot.sh"]
+
+[[ports]]
+localPort = 8080
+externalPort = 80

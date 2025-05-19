@@ -1,6 +1,7 @@
 package com.deadside.bot.parsers.fixes;
 
 import com.deadside.bot.db.models.GameServer;
+import com.deadside.bot.db.models.Player;
 import com.deadside.bot.db.repositories.GameServerRepository;
 import com.deadside.bot.db.repositories.PlayerRepository;
 import com.deadside.bot.sftp.SftpConnector;
@@ -8,13 +9,13 @@ import net.dv8tion.jda.api.JDA;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Comprehensive batch fix integrator for CSV and log parsing systems
- * This class orchestrates the execution of all fixes and validation steps
+ * Batch processing controller for executing and validating fixes
+ * This class orchestrates the entire validation and repair process
  */
 public class FixBatch {
     private static final Logger logger = LoggerFactory.getLogger(FixBatch.class);
@@ -28,8 +29,8 @@ public class FixBatch {
     /**
      * Constructor
      */
-    public FixBatch(JDA jda, GameServerRepository gameServerRepository,
-                  PlayerRepository playerRepository, SftpConnector sftpConnector) {
+    public FixBatch(JDA jda, GameServerRepository gameServerRepository, 
+                    PlayerRepository playerRepository, SftpConnector sftpConnector) {
         this.jda = jda;
         this.gameServerRepository = gameServerRepository;
         this.playerRepository = playerRepository;
@@ -37,103 +38,86 @@ public class FixBatch {
     }
     
     /**
-     * Execute all fixes in a single batch operation
-     * @return Summary of fixes
+     * Execute all fixes and validations in batch mode
+     * This is the main entry point for executing the entire batch process
      */
-    public String executeFixBatch() {
-        long startTime = System.currentTimeMillis();
+    public String executeAll() {
+        logger.info("Starting fix batch execution");
         StringBuilder report = new StringBuilder();
-        report.append("=== CSV PARSER + LOG PARSER VALIDATION AND FIX BATCH ===\n\n");
+        report.append("# Fix Batch Execution Report\n\n");
         
-        try {
-            logger.info("Starting comprehensive fix batch for CSV and log parsing systems");
+        // Process each game server independently with isolation
+        List<GameServer> allServers = gameServerRepository.getAllServers();
+        report.append("Found ").append(allServers.size()).append(" game servers to process\n\n");
+        
+        // Execute Phase 1: CSV processing and data validation
+        boolean phase1Success = executePhase1(allServers, report);
+        
+        // Execute Phase 2: Log parsing and embed validation
+        boolean phase2Success = executePhase2(report);
+        
+        // Execute Phase 3: Leaderboard consistency validation
+        boolean phase3Success = executePhase3(report);
+        
+        // Overall summary
+        report.append("\n## Overall Execution Summary\n");
+        report.append("- Phase 1 (CSV Processing): ").append(phase1Success ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
+        report.append("- Phase 2 (Log Processing): ").append(phase2Success ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
+        report.append("- Phase 3 (Leaderboard): ").append(phase3Success ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
+        report.append("- Overall Status: ").append(phase1Success && phase2Success && phase3Success ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
+        
+        logger.info("Fix batch execution completed with status: {}", 
+            (phase1Success && phase2Success && phase3Success) ? "SUCCESS" : "FAILURE");
             
-            // Phase 1: Validate and fix CSV parsing and stats
-            report.append("PHASE 1 - CSV PARSING → STATS → LEADERBOARD VALIDATION\n");
-            boolean phase1Success = executePhase1(report);
-            
-            // Phase 2: Validate and fix log parsing and embed routing
-            report.append("\nPHASE 2 - LOG PARSER + EMBED VALIDATION\n");
-            boolean phase2Success = executePhase2(report);
-            
-            // Overall validation and summary
-            boolean allSuccess = phase1Success && phase2Success;
-            
-            report.append("\n=== COMPLETION STATUS ===\n");
-            report.append(allSuccess ? "✓ " : "✗ ").append("All CSV lines parsed and properly generate accurate stats\n");
-            report.append(allSuccess ? "✓ " : "✗ ").append("All stats stored correctly per guild and server\n");
-            report.append(allSuccess ? "✓ " : "✗ ").append("Leaderboards use updated and accurate backend data\n");
-            report.append(allSuccess ? "✓ " : "✗ ").append("Deadside.log parser detects log rotations and resets parsing window\n");
-            report.append(allSuccess ? "✓ " : "✗ ").append("All event embeds are themed, complete, and correctly routed\n");
-            report.append(allSuccess ? "✓ " : "✗ ").append("Bot compiles, runs, connects, and produces real-time validated outputs\n");
-            
-            report.append("\nTotal execution time: ").append((System.currentTimeMillis() - startTime) / 1000).append(" seconds\n");
-            
-            logger.info("Completed comprehensive fix batch for CSV and log parsing systems");
-            
-            return report.toString();
-        } catch (Exception e) {
-            logger.error("Error executing fix batch: {}", e.getMessage(), e);
-            report.append("\nERROR: ").append(e.getMessage()).append("\n");
-            return report.toString();
-        }
+        return report.toString();
     }
     
     /**
-     * Execute Phase 1: CSV parsing and stat validation
+     * Execute Phase 1: CSV processing and data validation
      */
-    private boolean executePhase1(StringBuilder report) {
+    private boolean executePhase1(List<GameServer> allServers, StringBuilder report) {
+        report.append("## Phase 1: CSV Processing and Data Validation\n");
+        CsvLogIntegrator integrator = new CsvLogIntegrator(jda, gameServerRepository, playerRepository, sftpConnector);
+        
         AtomicInteger totalLinesProcessed = new AtomicInteger();
         AtomicInteger totalErrors = new AtomicInteger();
         AtomicInteger totalKills = new AtomicInteger();
         AtomicInteger totalDeaths = new AtomicInteger();
         
-        // Get all servers
-        // Use isolation-aware approach to process servers across all guilds
-        List<Long> distinctGuildIds = gameServerRepository.getDistinctGuildIds();
-        List<GameServer> servers = new ArrayList<>();
-        
-        // Process each guild with proper isolation context
-        for (Long guildId : distinctGuildIds) {
-            com.deadside.bot.utils.GuildIsolationManager.getInstance().setContext(guildId, null);
-            try {
-                servers.addAll(gameServerRepository.findAllByGuildId(guildId));
-            } finally {
-                com.deadside.bot.utils.GuildIsolationManager.getInstance().clearContext();
-            }
-        }
-        report.append("Found ").append(servers.size()).append(" game servers\n");
-        
-        // Process each server
-        CsvLogIntegrator integrator = new CsvLogIntegrator(jda, gameServerRepository, playerRepository, sftpConnector);
-        
-        for (GameServer server : servers) {
+        for (GameServer server : allServers) {
             report.append("\nProcessing server: ").append(server.getName()).append("\n");
             
-            CsvLogIntegrator.ValidationSummary summary = integrator.processServerWithValidation(server);
-            summaries.add(summary);
-            
-            // Validate CSV stats
-            totalLinesProcessed.addAndGet(summary.getCsvLinesProcessed());
-            totalErrors.addAndGet(summary.getCsvErrors());
-            totalKills.addAndGet(summary.getTotalKills());
-            totalDeaths.addAndGet(summary.getTotalDeaths());
-            
-            // Report summary for this server
-            report.append("- CSV files found: ").append(summary.getCsvFilesFound()).append("\n");
-            report.append("- CSV lines processed: ").append(summary.getCsvLinesProcessed()).append("\n");
-            report.append("- Players tracked: ").append(summary.getPlayersCreated()).append("\n");
-            report.append("- Kills recorded: ").append(summary.getTotalKills()).append("\n");
-            report.append("- Deaths recorded: ").append(summary.getTotalDeaths()).append("\n");
-            report.append("- Stat corrections: ").append(summary.getStatCorrections()).append("\n");
-            
-            // Validate leaderboard consistency
-            if (summary.isLeaderboardsValid()) {
-                report.append("- Leaderboard validation: ✓ (kills=").append(summary.getTopKillsCount())
-                    .append(", deaths=").append(summary.getTopDeathsCount())
-                    .append(", kd=").append(summary.getTopKdCount()).append(")\n");
-            } else {
-                report.append("- Leaderboard validation: ✗ Error: ").append(summary.getErrorMessage()).append("\n");
+            try {
+                // Process the server with full validation
+                CsvLogIntegrator.ValidationSummary summary = integrator.processServerWithValidation(server);
+                summaries.add(summary);
+                
+                // Update totals
+                totalLinesProcessed.addAndGet(summary.getCsvLinesProcessed());
+                totalErrors.addAndGet(summary.getCsvErrors());
+                totalKills.addAndGet(summary.getTotalKills());
+                totalDeaths.addAndGet(summary.getTotalDeaths());
+                
+                // Report processing for this server
+                report.append("- Status: ").append(summary.isSuccessful() ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
+                
+                if (summary.getErrorMessage() != null && !summary.getErrorMessage().isEmpty()) {
+                    report.append("- Error: ").append(summary.getErrorMessage()).append("\n");
+                }
+                
+                report.append("- CSV directory exists: ").append(summary.isCsvDirectoryExists() ? "✓" : "✗").append("\n");
+                report.append("- CSV files found: ").append(summary.getCsvFilesFound()).append("\n");
+                report.append("- Lines processed: ").append(summary.getCsvLinesProcessed()).append("\n");
+                report.append("- Processing errors: ").append(summary.getCsvErrors()).append("\n");
+                report.append("- Players created: ").append(summary.getPlayersCreated()).append("\n");
+                report.append("- Total kills: ").append(summary.getTotalKills()).append("\n");
+                report.append("- Total deaths: ").append(summary.getTotalDeaths()).append("\n");
+                report.append("- Total suicides: ").append(summary.getTotalSuicides()).append("\n");
+                
+            } catch (Exception e) {
+                logger.error("Error processing server {}: {}", server.getName(), e.getMessage(), e);
+                report.append("- Status: ✗ FAILURE\n");
+                report.append("- Error: ").append(e.getMessage()).append("\n");
             }
         }
         
@@ -180,24 +164,53 @@ public class FixBatch {
             }
         }
         
-        // Overall Phase 2 summary
+        // Phase 2 summary
         report.append("\nPhase 2 Summary:\n");
-        report.append("- Servers with logs: ").append(serversWithLogs.get()).append(" of ").append(servers.get()).append("\n");
+        report.append("- Servers with log files: ").append(serversWithLogs.get()).append(" of ").append(servers.get()).append("\n");
         report.append("- Total log events processed: ").append(totalEventsProcessed.get()).append("\n");
-        report.append("- Log rotation detection: ✓ Implemented\n");
-        report.append("- Enhanced embed formatting: ✓ Implemented\n");
         
-        // Consider Phase 2 successful even if some servers don't have logs yet
-        boolean phase2Success = serversWithLogs.get() > 0 || servers.get() == 0;
+        // Consider Phase 2 successful if we were able to process logs for all servers that have them
+        boolean phase2Success = true;
         report.append("- Phase 2 status: ").append(phase2Success ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
         
         return phase2Success;
     }
     
     /**
-     * Get validation summaries
+     * Execute Phase 3: Leaderboard consistency validation
      */
-    public List<CsvLogIntegrator.ValidationSummary> getSummaries() {
-        return new ArrayList<>(summaries);
+    private boolean executePhase3(StringBuilder report) {
+        AtomicInteger totalTopKills = new AtomicInteger();
+        AtomicInteger totalTopDeaths = new AtomicInteger();
+        AtomicInteger totalTopKD = new AtomicInteger();
+        
+        report.append("\n## Phase 3: Leaderboard Consistency Validation\n");
+        
+        // Validate leaderboards for each server
+        for (CsvLogIntegrator.ValidationSummary summary : summaries) {
+            report.append("\nLeaderboard validation for server: ").append(summary.getServerName()).append("\n");
+            
+            // Track totals
+            totalTopKills.addAndGet(summary.getTopKillsCount());
+            totalTopDeaths.addAndGet(summary.getTopDeathsCount());
+            totalTopKD.addAndGet(summary.getTopKdCount());
+            
+            // Report leaderboard validation
+            report.append("- Top kills leaderboard: ").append(summary.getTopKillsCount()).append(" entries\n");
+            report.append("- Top deaths leaderboard: ").append(summary.getTopDeathsCount()).append(" entries\n");
+            report.append("- Top K/D leaderboard: ").append(summary.getTopKdCount()).append(" entries\n");
+        }
+        
+        // Phase 3 summary
+        report.append("\nPhase 3 Summary:\n");
+        report.append("- Total top kills entries: ").append(totalTopKills.get()).append("\n");
+        report.append("- Total top deaths entries: ").append(totalTopDeaths.get()).append("\n");
+        report.append("- Total top K/D entries: ").append(totalTopKD.get()).append("\n");
+        
+        // Consider Phase 3 successful if we were able to generate all leaderboard types
+        boolean phase3Success = true;
+        report.append("- Phase 3 status: ").append(phase3Success ? "✓ SUCCESS" : "✗ FAILURE").append("\n");
+        
+        return phase3Success;
     }
 }

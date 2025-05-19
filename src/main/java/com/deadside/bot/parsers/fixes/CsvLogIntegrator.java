@@ -129,9 +129,12 @@ public class CsvLogIntegrator {
             
             // List all CSV files
             List<String> csvFiles = new ArrayList<>();
-            for (File file : deathlogDir.listFiles()) {
-                if (file.getName().endsWith(".csv")) {
-                    csvFiles.add(file.getName());
+            File[] files = deathlogDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.getName().endsWith(".csv")) {
+                        csvFiles.add(file.getName());
+                    }
                 }
             }
             
@@ -339,72 +342,60 @@ public class CsvLogIntegrator {
                 
                 try {
                     // Just verify we can query without errors, not expecting results
-                    playerRepository.getTopPlayersByKills(server.getGuildId(), server.getServerId(), 1);
+                    List<Player> topKills = playerRepository.getTopPlayersByKills(server.getGuildId(), server.getServerId(), 10);
+                    List<Player> topDeaths = playerRepository.getTopPlayersByDeaths(server.getGuildId(), server.getServerId(), 10);
+                    List<Player> topKd = playerRepository.getTopPlayersByKDRatio(server.getGuildId(), server.getServerId(), 10);
                     
-                    // Mark as valid with zero counts
+                    // Mark as valid since we can query without errors, even if results are empty
                     summary.setLeaderboardsValid(true);
-                    summary.setTopKillsCount(0);
-                    summary.setTopDeathsCount(0);
-                    summary.setTopKdCount(0);
-                    summary.setErrorMessage(null);
+                    summary.setTopKillsCount(topKills != null ? topKills.size() : 0);
+                    summary.setTopDeathsCount(topDeaths != null ? topDeaths.size() : 0);
+                    summary.setTopKdCount(topKd != null ? topKd.size() : 0);
                     
-                    logger.info("Minimal leaderboard validation successful for restricted server {}", 
-                        server.getName());
-                } catch (Exception e) {
-                    // Log but don't fail the validation
-                    logger.info("Minimal validation for restricted server {} threw exception: {}", 
-                        server.getName(), e.getMessage());
-                    summary.setLeaderboardsValid(false);
-                    summary.setErrorMessage("Restricted server validation error: " + e.getMessage());
+                    logger.info("Minimal leaderboard validation successful for restricted server {}", server.getName());
                 } finally {
+                    // Always clear the isolation context when done
                     com.deadside.bot.utils.GuildIsolationManager.getInstance().clearContext();
                 }
                 
                 return;
             }
             
-            // Set isolation context for this operation
+            // For standard servers, perform full validation of all leaderboard types
             com.deadside.bot.utils.GuildIsolationManager.getInstance().setContext(server.getGuildId(), server.getServerId());
             
             try {
-                // Validate kills leaderboard with proper isolation
-                List<Player> topKills = playerRepository.getTopPlayersByKills(
-                    server.getGuildId(), server.getServerId(), 10);
-                    
-                // Validate deaths leaderboard with proper isolation
-                List<Player> topDeaths = playerRepository.getTopPlayersByDeaths(
-                    server.getGuildId(), server.getServerId(), 10);
-                    
-                // Validate KD ratio leaderboard with proper isolation
-                List<Player> topKD = playerRepository.getTopPlayersByKDRatio(
-                    server.getGuildId(), server.getServerId(), 10);
+                // Top kills leaderboard validation
+                List<Player> topKills = playerRepository.getTopPlayersByKills(server.getGuildId(), server.getServerId(), 10);
                 
-                // Mark as valid even if empty - empty is valid, just means no data yet
+                // Top deaths leaderboard validation
+                List<Player> topDeaths = playerRepository.getTopPlayersByDeaths(server.getGuildId(), server.getServerId(), 10);
+                
+                // Top KD ratio leaderboard validation
+                List<Player> topKd = playerRepository.getTopPlayersByKDRatio(server.getGuildId(), server.getServerId(), 10);
+                
+                // Set validation results
                 summary.setLeaderboardsValid(true);
-                summary.setTopKillsCount(topKills.size());
-                summary.setTopDeathsCount(topDeaths.size());
-                summary.setTopKdCount(topKD.size());
+                summary.setTopKillsCount(topKills != null ? topKills.size() : 0);
+                summary.setTopDeathsCount(topDeaths != null ? topDeaths.size() : 0);
+                summary.setTopKdCount(topKd != null ? topKd.size() : 0);
                 
-                logger.info("Validated leaderboard data for server {}: kills={}, deaths={}, kd={}", 
-                    server.getName(), topKills.size(), topDeaths.size(), topKD.size());
+                logger.info("Full leaderboard validation successful for server {}: {} kills, {} deaths, {} KD", 
+                    server.getName(), 
+                    summary.getTopKillsCount(),
+                    summary.getTopDeathsCount(),
+                    summary.getTopKdCount());
             } finally {
-                // Always clear isolation context when done
+                // Always clear the isolation context when done
                 com.deadside.bot.utils.GuildIsolationManager.getInstance().clearContext();
             }
         } catch (Exception e) {
-            logger.error("Error validating leaderboard data for server {}: {}", 
+            logger.error("Error validating leaderboard for server {}: {}", 
                 server.getName(), e.getMessage(), e);
-            summary.setLeaderboardsValid(false);
             summary.setErrorMessage("Leaderboard validation error: " + e.getMessage());
         }
     }
     
-    /**
-     * Class to hold validation results
-     */
-    /**
-     * Class to hold validation results
-     */
     /**
      * Class to hold validation results
      */
@@ -440,126 +431,359 @@ public class CsvLogIntegrator {
         private int topDeathsCount;
         private int topKdCount;
         
+        /**
+         * Check if this validation summary indicates a valid state
+         * @return true if the validation is valid
+         */
         public boolean isValid() {
             return successful && (errorMessage == null || errorMessage.isEmpty());
         }
         
+        /**
+         * Check if the validation was successful
+         * @return true if successful
+         */
         public boolean isSuccessful() {
             return successful;
         }
         
+        /**
+         * Get the server name
+         * @return the server name
+         */
         public String getServerName() {
             return serverName;
         }
         
+        /**
+         * Set the server name
+         * @param serverName the server name to set
+         */
         public void setServerName(String serverName) {
             this.serverName = serverName;
         }
         
+        /**
+         * Set the start timestamp
+         * @param startTimestamp the start timestamp to set
+         */
         public void setStartTimestamp(long startTimestamp) {
             this.startTimestamp = startTimestamp;
         }
         
+        /**
+         * Set the end timestamp
+         * @param endTimestamp the end timestamp to set
+         */
         public void setEndTimestamp(long endTimestamp) {
             this.endTimestamp = endTimestamp;
         }
         
+        /**
+         * Set whether the validation was successful
+         * @param successful true if successful, false otherwise
+         */
         public void setSuccessful(boolean successful) {
             this.successful = successful;
         }
         
+        /**
+         * Get the error message
+         * @return the error message
+         */
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+        
+        /**
+         * Set the error message
+         * @param errorMessage the error message to set
+         */
         public void setErrorMessage(String errorMessage) {
             this.errorMessage = errorMessage;
         }
         
+        /**
+         * Set whether the CSV directory exists
+         * @param csvDirectoryExists true if exists, false otherwise
+         */
         public void setCsvDirectoryExists(boolean csvDirectoryExists) {
             this.csvDirectoryExists = csvDirectoryExists;
         }
         
+        /**
+         * Set the number of CSV files found
+         * @param csvFilesFound the number of CSV files found
+         */
         public void setCsvFilesFound(int csvFilesFound) {
             this.csvFilesFound = csvFilesFound;
         }
         
+        /**
+         * Set the number of CSV files processed
+         * @param csvFilesCount the number of CSV files processed
+         */
         public void setCsvFilesCount(int csvFilesCount) {
             this.csvFilesCount = csvFilesCount;
         }
         
+        /**
+         * Set the number of CSV lines processed
+         * @param csvLinesProcessed the number of CSV lines processed
+         */
         public void setCsvLinesProcessed(int csvLinesProcessed) {
             this.csvLinesProcessed = csvLinesProcessed;
         }
         
+        /**
+         * Set the number of CSV processing errors
+         * @param csvErrors the number of CSV processing errors
+         */
         public void setCsvErrors(int csvErrors) {
             this.csvErrors = csvErrors;
         }
         
+        /**
+         * Set the number of CSV processing errors
+         * @param csvProcessingErrors the number of CSV processing errors
+         */
         public void setCsvProcessingErrors(int csvProcessingErrors) {
             this.csvProcessingErrors = csvProcessingErrors;
         }
         
+        /**
+         * Set the number of players created
+         * @param playersCreated the number of players created
+         */
         public void setPlayersCreated(int playersCreated) {
             this.playersCreated = playersCreated;
         }
         
+        /**
+         * Set the total number of kills
+         * @param totalKills the total number of kills
+         */
         public void setTotalKills(int totalKills) {
             this.totalKills = totalKills;
         }
         
+        /**
+         * Set the total number of deaths
+         * @param totalDeaths the total number of deaths
+         */
         public void setTotalDeaths(int totalDeaths) {
             this.totalDeaths = totalDeaths;
         }
         
+        /**
+         * Set the total number of suicides
+         * @param totalSuicides the total number of suicides
+         */
         public void setTotalSuicides(int totalSuicides) {
             this.totalSuicides = totalSuicides;
         }
         
+        /**
+         * Set the number of stat corrections
+         * @param statCorrections the number of stat corrections
+         */
         public void setStatCorrections(int statCorrections) {
             this.statCorrections = statCorrections;
         }
         
+        /**
+         * Check if the log file exists
+         * @return true if exists, false otherwise
+         */
         public boolean isLogFileExists() {
             return logFileExists;
         }
         
+        /**
+         * Set whether the log file exists
+         * @param logFileExists true if exists, false otherwise
+         */
         public void setLogFileExists(boolean logFileExists) {
             this.logFileExists = logFileExists;
         }
         
+        /**
+         * Set whether log processing was valid
+         * @param logProcessingValid true if valid, false otherwise
+         */
         public void setLogProcessingValid(boolean logProcessingValid) {
             this.logProcessingValid = logProcessingValid;
         }
         
+        /**
+         * Get the number of log events processed
+         * @return the number of log events processed
+         */
         public int getLogEventsProcessed() {
             return logEventsProcessed;
         }
         
+        /**
+         * Set the number of log events processed
+         * @param logEventsProcessed the number of log events processed
+         */
         public void setLogEventsProcessed(int logEventsProcessed) {
             this.logEventsProcessed = logEventsProcessed;
         }
         
+        /**
+         * Set the number of events processed
+         * @param eventsProcessed the number of events processed
+         */
         public void setEventsProcessed(int eventsProcessed) {
             this.eventsProcessed = eventsProcessed;
         }
         
+        /**
+         * Set whether the leaderboards are valid
+         * @param leaderboardsValid true if valid, false otherwise
+         */
         public void setLeaderboardsValid(boolean leaderboardsValid) {
             this.leaderboardsValid = leaderboardsValid;
         }
         
+        /**
+         * Get the number of top kills entries
+         * @return the number of top kills entries
+         */
+        public int getTopKillsCount() {
+            return topKillsCount;
+        }
+        
+        /**
+         * Set the number of top kills entries
+         * @param topKillsCount the number of top kills entries
+         */
         public void setTopKillsCount(int topKillsCount) {
             this.topKillsCount = topKillsCount;
         }
         
+        /**
+         * Get the number of top deaths entries
+         * @return the number of top deaths entries
+         */
+        public int getTopDeathsCount() {
+            return topDeathsCount;
+        }
+        
+        /**
+         * Set the number of top deaths entries
+         * @param topDeathsCount the number of top deaths entries
+         */
         public void setTopDeathsCount(int topDeathsCount) {
             this.topDeathsCount = topDeathsCount;
         }
         
+        /**
+         * Get the number of top KD ratio entries
+         * @return the number of top KD ratio entries
+         */
+        public int getTopKdCount() {
+            return topKdCount;
+        }
+        
+        /**
+         * Set the number of top KD ratio entries
+         * @param topKdCount the number of top KD ratio entries
+         */
         public void setTopKdCount(int topKdCount) {
             this.topKdCount = topKdCount;
         }
         
+        /**
+         * Get CSV lines processed
+         * @return CSV lines processed
+         */
+        public int getCsvLinesProcessed() {
+            return csvLinesProcessed;
+        }
+        
+        /**
+         * Get CSV directory exists
+         * @return if CSV directory exists
+         */
+        public boolean isCsvDirectoryExists() {
+            return csvDirectoryExists;
+        }
+        
+        /**
+         * Get CSV files found
+         * @return CSV files found
+         */
+        public int getCsvFilesFound() {
+            return csvFilesFound;
+        }
+        
+        /**
+         * Get CSV errors
+         * @return CSV errors
+         */
+        public int getCsvErrors() {
+            return csvErrors;
+        }
+        
+        /**
+         * Get players created
+         * @return players created
+         */
+        public int getPlayersCreated() {
+            return playersCreated;
+        }
+        
+        /**
+         * Get total kills
+         * @return total kills
+         */
+        public int getTotalKills() {
+            return totalKills;
+        }
+        
+        /**
+         * Get total deaths
+         * @return total deaths
+         */
+        public int getTotalDeaths() {
+            return totalDeaths;
+        }
+        
+        /**
+         * Get total suicides
+         * @return total suicides
+         */
+        public int getTotalSuicides() {
+            return totalSuicides;
+        }
+        
+        /**
+         * Get stat corrections
+         * @return stat corrections
+         */
+        public int getStatCorrections() {
+            return statCorrections;
+        }
+        
+        /**
+         * Check if leaderboards are valid
+         * @return if leaderboards are valid
+         */
+        public boolean isLeaderboardsValid() {
+            return leaderboardsValid;
+        }
+        
+        /**
+         * Get a string representation of this validation summary
+         * @return a string representation of this validation summary
+         */
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
             sb.append("Validation Summary for ").append(serverName).append("\n");
+            sb.append("Duration: ").append((endTimestamp - startTimestamp) / 1000).append(" seconds\n");
             sb.append("Status: ").append(successful ? "SUCCESS" : "FAILURE").append("\n");
             
             if (errorMessage != null && !errorMessage.isEmpty()) {
@@ -569,195 +793,4 @@ public class CsvLogIntegrator {
             return sb.toString();
         }
     }
-        // Method to check if the validation was successful
-        public boolean isSuccessful() {
-            return successful;
-        }
-        
-        // Getter for server name
-        public String getServerName() { 
-            return serverName; 
-        }
-        
-        // Setter methods for all fields
-        public void setServerName(String serverName) {
-            this.serverName = serverName;
-        }
-        
-        public void setStartTimestamp(long startTimestamp) {
-            this.startTimestamp = startTimestamp;
-        }
-        
-        public void setEndTimestamp(long endTimestamp) {
-            this.endTimestamp = endTimestamp;
-        }
-        
-        public void setSuccessful(boolean successful) {
-            this.successful = successful;
-        }
-        
-        public void setErrorMessage(String errorMessage) {
-            this.errorMessage = errorMessage;
-        }
-        
-        public void setCsvDirectoryExists(boolean csvDirectoryExists) {
-            this.csvDirectoryExists = csvDirectoryExists;
-        }
-        
-        public void setCsvFilesFound(int csvFilesFound) {
-            this.csvFilesFound = csvFilesFound;
-        }
-        
-        public void setCsvFilesCount(int csvFilesCount) {
-            this.csvFilesCount = csvFilesCount;
-        }
-        
-        public void setCsvLinesProcessed(int csvLinesProcessed) {
-            this.csvLinesProcessed = csvLinesProcessed;
-        }
-        
-        public void setCsvErrors(int csvErrors) {
-            this.csvErrors = csvErrors;
-        }
-        
-        public void setCsvProcessingErrors(int csvProcessingErrors) {
-            this.csvProcessingErrors = csvProcessingErrors;
-        }
-        
-        public void setPlayersCreated(int playersCreated) {
-            this.playersCreated = playersCreated;
-        }
-        
-        public void setTotalKills(int totalKills) {
-            this.totalKills = totalKills;
-        }
-        
-        public void setTotalDeaths(int totalDeaths) {
-            this.totalDeaths = totalDeaths;
-        }
-        
-        public void setTotalSuicides(int totalSuicides) {
-            this.totalSuicides = totalSuicides;
-        }
-        
-        public void setStatCorrections(int statCorrections) {
-            this.statCorrections = statCorrections;
-        }
-        
-        public void setLogFileExists(boolean logFileExists) {
-            this.logFileExists = logFileExists;
-        }
-        
-        public void setLogProcessingValid(boolean logProcessingValid) {
-            this.logProcessingValid = logProcessingValid;
-        }
-        
-        public void setLogEventsProcessed(int logEventsProcessed) {
-            this.logEventsProcessed = logEventsProcessed;
-        }
-        
-        public void setEventsProcessed(int eventsProcessed) {
-            this.eventsProcessed = eventsProcessed;
-        }
-        
-        public void setLeaderboardsValid(boolean leaderboardsValid) {
-            this.leaderboardsValid = leaderboardsValid;
-        }
-        
-        public void setTopKillsCount(int topKillsCount) {
-            this.topKillsCount = topKillsCount;
-        }
-        
-        public void setTopDeathsCount(int topDeathsCount) {
-            this.topDeathsCount = topDeathsCount;
-        }
-        
-        public void setTopKdCount(int topKdCount) {
-            this.topKdCount = topKdCount;
-        }
-        
-        public String getErrorMessage() { return errorMessage; }
-        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
-        
-        public boolean isCsvDirectoryExists() { return csvDirectoryExists; }
-        public void setCsvDirectoryExists(boolean csvDirectoryExists) { this.csvDirectoryExists = csvDirectoryExists; }
-        
-        public int getCsvFilesFound() { return csvFilesFound; }
-        public void setCsvFilesFound(int csvFilesFound) { this.csvFilesFound = csvFilesFound; }
-        
-        public int getCsvLinesProcessed() { return csvLinesProcessed; }
-        public void setCsvLinesProcessed(int csvLinesProcessed) { this.csvLinesProcessed = csvLinesProcessed; }
-        
-        public int getCsvErrors() { return csvErrors; }
-        public void setCsvErrors(int csvErrors) { this.csvErrors = csvErrors; }
-        
-        public int getPlayersCreated() { return playersCreated; }
-        public void setPlayersCreated(int playersCreated) { this.playersCreated = playersCreated; }
-        
-        public int getTotalKills() { return totalKills; }
-        public void setTotalKills(int totalKills) { this.totalKills = totalKills; }
-        
-        public int getTotalDeaths() { return totalDeaths; }
-        public void setTotalDeaths(int totalDeaths) { this.totalDeaths = totalDeaths; }
-        
-        public int getTotalSuicides() { return totalSuicides; }
-        public void setTotalSuicides(int totalSuicides) { this.totalSuicides = totalSuicides; }
-        
-        public int getStatCorrections() { return statCorrections; }
-        public void setStatCorrections(int statCorrections) { this.statCorrections = statCorrections; }
-        
-        public boolean isLogFileExists() { return logFileExists; }
-        public void setLogFileExists(boolean logFileExists) { this.logFileExists = logFileExists; }
-        
-        public int getLogEventsProcessed() { return logEventsProcessed; }
-        public void setLogEventsProcessed(int logEventsProcessed) { this.logEventsProcessed = logEventsProcessed; }
-        
-        public boolean isLeaderboardsValid() { return leaderboardsValid; }
-        public void setLeaderboardsValid(boolean leaderboardsValid) { this.leaderboardsValid = leaderboardsValid; }
-        
-        public int getTopKillsCount() { return topKillsCount; }
-        public void setTopKillsCount(int topKillsCount) { this.topKillsCount = topKillsCount; }
-        
-        public int getTopDeathsCount() { return topDeathsCount; }
-        public void setTopDeathsCount(int topDeathsCount) { this.topDeathsCount = topDeathsCount; }
-        
-        public int getTopKdCount() { return topKdCount; }
-        public void setTopKdCount(int topKdCount) { this.topKdCount = topKdCount; }
-        
-        @Override
-        public String toString() {
-            long duration = endTimestamp - startTimestamp;
-            
-            StringBuilder sb = new StringBuilder();
-            sb.append("=== Validation Summary for ").append(serverName).append(" ===\n");
-            sb.append("Duration: ").append(duration / 1000).append(" seconds\n");
-            sb.append("Status: ").append(successful ? "SUCCESS" : "FAILURE").append("\n");
-            
-            if (errorMessage != null && !errorMessage.isEmpty()) {
-                sb.append("Error: ").append(errorMessage).append("\n");
-            }
-            
-            sb.append("\nCSV Validation:\n");
-            sb.append("- Directory exists: ").append(csvDirectoryExists).append("\n");
-            sb.append("- Files found: ").append(csvFilesFound).append("\n");
-            sb.append("- Lines processed: ").append(csvLinesProcessed).append("\n");
-            sb.append("- Errors: ").append(csvErrors).append("\n");
-            sb.append("- Players created: ").append(playersCreated).append("\n");
-            sb.append("- Total kills: ").append(totalKills).append("\n");
-            sb.append("- Total deaths: ").append(totalDeaths).append("\n");
-            sb.append("- Total suicides: ").append(totalSuicides).append("\n");
-            sb.append("- Stat corrections: ").append(statCorrections).append("\n");
-            
-            sb.append("\nLog Validation:\n");
-            sb.append("- Log file exists: ").append(logFileExists).append("\n");
-            sb.append("- Log events processed: ").append(logEventsProcessed).append("\n");
-            
-            sb.append("\nLeaderboard Validation:\n");
-            sb.append("- Leaderboards valid: ").append(leaderboardsValid).append("\n");
-            sb.append("- Top kills count: ").append(topKillsCount).append("\n");
-            sb.append("- Top deaths count: ").append(topDeathsCount).append("\n");
-            sb.append("- Top KD count: ").append(topKdCount).append("\n");
-            
-            return sb.toString();
-        }
-    }
+}

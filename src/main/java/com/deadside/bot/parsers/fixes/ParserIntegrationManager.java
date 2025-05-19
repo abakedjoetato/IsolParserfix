@@ -48,7 +48,7 @@ public class ParserIntegrationManager {
             
             // Execute the fix batch
             FixBatch fixBatch = new FixBatch(jda, gameServerRepository, playerRepository, sftpConnector);
-            String summary = fixBatch.executeFixBatch();
+            String summary = fixBatch.executeAll();
             
             // Log the summary for verification purposes only
             logger.info("Fix batch execution summary:\n{}", summary);

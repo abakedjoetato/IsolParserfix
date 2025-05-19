@@ -70,7 +70,7 @@ public class DeadsideParserFixEntrypoint {
             
             // Step 3: Execute comprehensive fix batch for verification
             FixBatch fixBatch = new FixBatch(jda, gameServerRepository, playerRepository, sftpConnector);
-            String batchResults = fixBatch.executeFixBatch();
+            String batchResults = fixBatch.executeAll();
             
             // Step 4: Final verification
             boolean verificationSuccess = integrationManager.verifyFixIntegration();
